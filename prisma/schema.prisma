@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  password     String
+  savingsGoal  Float         @default(0)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
+enum TransactionType {
+  income
+  expense
+}
+
+enum TransactionRepeat {
+  none
+  monthly
+}
+
+model Transaction {
+  id        String            @id @default(cuid())
+  amount    Float
+  category  String
+  type      TransactionType
+  repeat    TransactionRepeat @default(none)
+  date      DateTime          @default(now())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime          @default(now())
+}
