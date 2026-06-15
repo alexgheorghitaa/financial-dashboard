@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, Eye, EyeOff, Check } from "lucide-react";
+import { signIn } from "next-auth/react";
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
@@ -20,7 +21,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const next: typeof errors = {};
     if (!emailOk(email)) next.email = "Please enter a valid email address.";
@@ -28,8 +29,16 @@ export default function LoginPage() {
     setErrors(next);
     if (Object.keys(next).length === 0) {
       setLoading(true);
-      setTimeout(() => router.push("/dashboard"), 600);
+      const res = await signIn("credentials", { email, password, redirect: false });
+      if (res?.error) {
+        setErrors({ password: "Invalid email or password." });
+        setLoading(false);
+        return;
+      }
+      router.push("/dashboard");
+      router.refresh();
     }
+     
   }
 
   return (

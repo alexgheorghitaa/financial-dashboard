@@ -1,5 +1,6 @@
 "use client";
-
+import { signIn } from "next-auth/react";
+import { registerUser } from "./actions";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -40,7 +41,7 @@ export default function RegisterPage() {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [k]: e.target.value });
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const next: Record<string, string> = {};
     if (!form.name.trim()) next.name = "Please enter your name.";
@@ -51,7 +52,15 @@ export default function RegisterPage() {
     setErrors(next);
     if (Object.keys(next).length === 0) {
       setLoading(true);
-      setTimeout(() => router.push("/dashboard"), 650);
+      const res = await registerUser({ name: form.name, email: form.email, password: form.password });
+      if (res.error) {
+        setErrors({ email: res.error });
+        setLoading(false);
+        return;
+      }
+      await signIn("credentials", { email: form.email, password: form.password, redirect: false });
+      router.push("/dashboard");
+      router.refresh();
     }
   }
 
