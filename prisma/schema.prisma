@@ -14,7 +14,7 @@ model User {
   password     String
   savingsGoal  Float         @default(0)
   createdAt    DateTime      @default(now())
-  transactions Transaction[]
+  accounts Account[]
 }
 
 enum TransactionType {
@@ -26,6 +26,14 @@ enum TransactionRepeat {
   none
   monthly
 }
+model Account{
+  id           String        @id @default(cuid())
+  name         String
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+}
 
 model Transaction {
   id        String            @id @default(cuid())
@@ -34,7 +42,7 @@ model Transaction {
   type      TransactionType
   repeat    TransactionRepeat @default(none)
   date      DateTime          @default(now())
-  userId    String
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdAt DateTime          @default(now())
 }
