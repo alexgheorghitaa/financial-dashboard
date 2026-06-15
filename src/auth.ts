@@ -32,8 +32,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
-    authorized({ auth }) {
-      return !!auth;
+    authorized({ request, auth }) {
+      const isLoggedIn = !!auth;
+      const { pathname } = request.nextUrl;
+      if (pathname.startsWith("/dashboard")) return isLoggedIn;
+      if (isLoggedIn && (pathname === "/" || pathname === "/login" || pathname === "/register"))
+        return Response.redirect(new URL("/dashboard", request.nextUrl.origin));
+      return true;
     },
     jwt({ token, user }) {
       if (user) token.id = user.id;
