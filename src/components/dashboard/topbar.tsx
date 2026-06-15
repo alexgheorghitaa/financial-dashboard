@@ -2,11 +2,20 @@
 
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
-import { user } from "@/lib/mock-data";
-import { Search, Bell, ChevronDown, ChevronsUpDown, ChevronRight } from "lucide-react";
+import { signOut } from "next-auth/react";
+import { Search, Bell, ChevronDown, ChevronsUpDown, ChevronRight, Settings, LogOut } from "lucide-react";
 
-export function Topbar() {
+type TopbarUser = { name?: string | null; email?: string | null; image?: string | null };
+
+export function Topbar({user}: { user: TopbarUser }) {
   return (
     <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-db-line bg-db-card px-6 py-2.5">
       <Link href="/" className="flex size-[34px] items-center justify-center rounded-[9px]" title="FinTrack">
@@ -29,14 +38,53 @@ export function Topbar() {
       <div className="ml-auto flex items-center gap-3">
         <ThemeToggle />
         <button className="relative flex size-[42px] items-center justify-center rounded-[10px] border border-db-line bg-db-card text-db-text2 hover:bg-db-card2"><Bell className="size-[19px]" /><span className="absolute right-2.5 top-2 size-2 rounded-full border-2 border-db-card bg-[#EF4444]" /></button>
-        <button className="flex items-center gap-2.5 pl-1">
-          <Avatar className="size-[38px]"><AvatarImage src={user.avatar} alt={user.name} /><AvatarFallback>JB</AvatarFallback></Avatar>
-          <span className="hidden whitespace-nowrap leading-tight md:block">
-            <b className="block text-sm font-bold text-db-text">{user.name}</b>
-            <span className="text-xs text-db-soft">{user.handle}</span>
-          </span>
-          <ChevronDown className="size-3.5 text-db-soft" />
-        </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2.5 rounded-[10px] px-1 outline-none hover:bg-db-card2 focus-visible:ring-2 focus-visible:ring-db-accent/40">
+              <Avatar className="size-[38px]"><AvatarImage src={user.image??undefined} alt={user.name?? "User"} /><AvatarFallback>JB</AvatarFallback></Avatar>
+              <span className="hidden whitespace-nowrap text-left leading-tight md:block">
+                <b className="block text-sm font-bold text-db-text">{user.name}</b>
+                <span className="text-xs text-db-soft">{user.email}</span>
+              </span>
+              <ChevronDown className="size-3.5 text-db-soft" />
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent
+            align="end"
+            sideOffset={10}
+            className="w-60 rounded-2xl border-db-line bg-db-card p-1.5 text-db-text shadow-[0_18px_50px_rgba(16,24,40,0.18)]"
+          >
+            <div className="flex items-center gap-3 px-2.5 py-2">
+              <Avatar className="size-9"><AvatarImage src={user.image??undefined} alt={user.name?? "User"} /><AvatarFallback>JB</AvatarFallback></Avatar>
+              <div className="min-w-0">
+                <b className="block truncate text-sm font-semibold text-db-text">{user.name}</b>
+                <span className="block truncate text-xs text-db-soft">{user.email}</span>
+              </div>
+            </div>
+
+            <DropdownMenuSeparator className="bg-db-line" />
+
+            <DropdownMenuItem
+              asChild
+              className="cursor-pointer rounded-lg px-2.5 py-2 text-[13.5px] text-db-text focus:bg-db-card2 focus:text-db-text"
+            >
+              <Link href="/dashboard">
+                <Settings className="size-4 text-db-soft" /> Settings
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator className="bg-db-line" />
+
+            <DropdownMenuItem
+              onSelect={() => signOut({ redirectTo: "/login" })}
+              className="cursor-pointer rounded-lg px-2.5 py-2 text-[13.5px] font-medium text-[#dc2626] focus:bg-[#fef2f2] focus:text-[#dc2626] dark:focus:bg-[#dc2626]/15"
+            >
+              <LogOut className="size-4 text-[#dc2626]" /> Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

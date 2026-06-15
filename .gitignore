@@ -2,6 +2,7 @@
 
 # AI assistant files (Claude, agents, etc.) — keep them out of the repo
 CLAUDE.md
+CLAUDE.local.md
 AGENTS.md
 GEMINI.md
 .claude/
