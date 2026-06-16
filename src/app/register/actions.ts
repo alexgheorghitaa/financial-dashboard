@@ -26,6 +26,7 @@ export async function registerUser(
         name: parsed.data.name,
         email: parsed.data.email,
         password: passwordHash,
+        accounts: { create: { name: "Personal" } }
       },
     });
     return { success: true };

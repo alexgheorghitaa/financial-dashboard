@@ -39,10 +39,12 @@ model Transaction {
   id        String            @id @default(cuid())
   amount    Float
   category  String
+  description String
   type      TransactionType
   repeat    TransactionRepeat @default(none)
   date      DateTime          @default(now())
   accountId String
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdAt DateTime          @default(now())
+  
 }
