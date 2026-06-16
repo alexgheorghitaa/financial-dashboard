@@ -74,7 +74,14 @@ export const weeklyExpenses: WeekPoint[] = [
   { week: "W7", expenses: 1495 },
   { week: "W8", expenses: 1875 },
 ];
-
+export type NewTransactionInput = {
+  description: string;
+  amount: number;
+  type: TxType;
+  category: string;
+  date: string;
+  repeat: "none" | "monthly";
+};
 export type TxStatus = "Completed" | "Pending" | "Failed";
 export type TxType = "income" | "expense";
 export type Transaction = {
@@ -101,15 +108,6 @@ export const categories = [
   "Transport",
   "Bills",
 ] as const;
-
-export const transactions: Transaction[] = [
-  { id: "t1", name: "Salary — Acme Inc.", detail: "Direct deposit", initial: "A", tint: "#eaf1fb", fg: "#2f6bd4", date: "Mar 01, 2026", category: "Income", amount: 16281.48, type: "income", status: "Completed" },
-  { id: "t2", name: "Netflix", detail: "Subscription", initial: "N", tint: "#fdecec", fg: "#e11d48", date: "Mar 08, 2026", category: "Entertainment", amount: -15.99, type: "expense", status: "Completed" },
-  { id: "t3", name: "Whole Foods Market", detail: "Card ··2472", initial: "W", tint: "#eaf7ef", fg: "#16a34a", date: "Mar 10, 2026", category: "Groceries", amount: -86.4, type: "expense", status: "Completed" },
-  { id: "t4", name: "Figma", detail: "Annual plan", initial: "F", tint: "#f1ecfb", fg: "#7c3aed", date: "Mar 12, 2026", category: "Software", amount: -144.0, type: "expense", status: "Pending" },
-  { id: "t5", name: "Upwork Payout", detail: "Freelance", initial: "U", tint: "#eaf1fb", fg: "#2f6bd4", date: "Feb 28, 2026", category: "Income", amount: 2450.0, type: "income", status: "Completed" },
-  { id: "t6", name: "Apple Store", detail: "Card ··2472", initial: "A", tint: "#fef6e7", fg: "#b7791f", date: "Mar 05, 2026", category: "Shopping", amount: -1299.0, type: "expense", status: "Failed" },
-];
 
 export const usd = (n: number, withSign = false) => {
   const s = Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

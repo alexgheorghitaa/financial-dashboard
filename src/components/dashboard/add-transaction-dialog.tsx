@@ -8,10 +8,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
-import { categories, type Transaction, type TxType } from "@/lib/mock-data";
+import { categories, type NewTransactionInput, type Transaction } from "@/lib/mock-data";
 
 const schema = z.object({
   name: z.string().min(2, "Enter a description (min 2 characters)."),
@@ -19,6 +18,7 @@ const schema = z.object({
   type: z.enum(["income", "expense"]),
   category: z.string().min(1, "Pick a category."),
   date: z.string().min(1, "Pick a date."),
+  repeat: z.enum(["none", "monthly"]),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -36,20 +36,21 @@ function fmtDate(iso: string) {
 const fieldClass =
   "h-11 w-full rounded-lg border border-db-line bg-db-card2 px-3 text-sm text-db-text outline-none focus:border-db-accent";
 
-export function AddTransactionDialog({ onAdd }: { onAdd: (t: Transaction) => void }) {
+export function AddTransactionDialog({ onAdd }: { onAdd: (ui: Transaction, raw: NewTransactionInput) => void }) {
   const [open, setOpen] = useState(false);
   const {
     register, handleSubmit, reset, formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { type: "expense", category: "Groceries", date: new Date().toISOString().slice(0, 10) },
+    defaultValues: { type: "expense", category: "Groceries", date: new Date().toISOString().slice(0, 10), repeat: "none" },
   });
 
   function submit(values: FormValues) {
     const t = TINTS[values.type];
     const signed = values.type === "income" ? Math.abs(values.amount) : -Math.abs(values.amount);
-    onAdd({
-      id: `t${Date.now()}`,
+
+    const ui: Transaction = {
+      id: crypto.randomUUID(),
       name: values.name,
       detail: values.type === "income" ? "Income" : values.category,
       initial: values.name.charAt(0).toUpperCase(),
@@ -60,7 +61,17 @@ export function AddTransactionDialog({ onAdd }: { onAdd: (t: Transaction) => voi
       amount: signed,
       type: values.type,
       status: "Completed",
+    };
+
+    onAdd(ui, {
+      description: values.name,
+      amount: values.amount,
+      type: values.type,
+      category: values.category,
+      date: values.date,
+      repeat: values.repeat,
     });
+
     reset();
     setOpen(false);
   }
@@ -113,6 +124,14 @@ export function AddTransactionDialog({ onAdd }: { onAdd: (t: Transaction) => voi
               <input id="date" type="date" className={fieldClass} {...register("date")} />
               {errors.date && <p className="mt-1 text-xs text-destructive">{errors.date.message}</p>}
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="repeat" className="mb-1.5 block text-db-text2">Repeat</Label>
+            <select id="repeat" className={fieldClass} {...register("repeat")}>
+              <option value="none">One-time</option>
+              <option value="monthly">Monthly</option>
+            </select>
           </div>
 
           <DialogFooter className="pt-2">

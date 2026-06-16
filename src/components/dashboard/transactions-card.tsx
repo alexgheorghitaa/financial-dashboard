@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddTransactionDialog } from "@/components/dashboard/add-transaction-dialog";
-import { usd, type Transaction } from "@/lib/mock-data";
+import { usd, type Transaction, type NewTransactionInput} from "@/lib/mock-data";
 import { Search, MoreHorizontal } from "lucide-react";
 
 const statusClass: Record<string, string> = {
@@ -26,7 +26,7 @@ type FilterKey = (typeof FILTERS)[number]["key"];
 
 export function TransactionsCard({
   transactions, onAdd,
-}: { transactions: Transaction[]; onAdd: (t: Transaction) => void }) {
+}: { transactions: Transaction[]; onAdd: (ui: Transaction, raw: NewTransactionInput) => void }) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useOptimistic, startTransition } from "react";
 import { Card } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
 import { StatCards } from "@/components/dashboard/stat-cards";
@@ -9,19 +9,27 @@ import { AllExpenses } from "@/components/dashboard/all-expenses";
 import { SavingsGoalCard } from "@/components/dashboard/savings-goal-card";
 import { TransactionsCard } from "@/components/dashboard/transactions-card";
 import { SettingsPanel } from "@/components/dashboard/settings-panel";
-import { transactions as seedTransactions, savingsGoal, type Transaction } from "@/lib/mock-data";
+import { savingsGoal, type Transaction } from "@/lib/mock-data";
+import { createTransaction } from "@/app/dashboard/actions";
 
 const TABS = ["Overview", "Analytics", "Transactions", "Settings"] as const;
 type Tab = (typeof TABS)[number];
 
 type DashUser = { name?: string | null; email?: string | null; image?: string | null };
 
-export function DashboardClient({ user }: { user: DashUser }) {
+export function DashboardClient({ user, transactions }: { user: DashUser; transactions: Transaction[] }) {
   const [tab, setTab] = useState<Tab>("Overview");
-  const [list, setList] = useState<Transaction[]>(seedTransactions);
+  const [optimisticTx, addOptimistic] = useOptimistic(
+    transactions,
+    (current: Transaction[], tx: Transaction) => [tx, ...current],
+  );
+  function handleAdd(ui: Transaction, raw: Parameters<typeof createTransaction>[0]) {
+    startTransition(async () => {
+      addOptimistic(ui);
+      await createTransaction(raw);
+    });
+  }
   const [target, setTarget] = useState(savingsGoal.target);
-
-  const addTransaction = (t: Transaction) => setList((prev) => [t, ...prev]);
 
   return (
     <div className="min-h-screen bg-db-bg text-db-text">
@@ -64,7 +72,7 @@ export function DashboardClient({ user }: { user: DashUser }) {
                 <SavingsGoalCard saved={savingsGoal.saved} target={target} />
               </div>
             </div>
-            <TransactionsCard transactions={list} onAdd={addTransaction} />
+            <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} />
           </div>
         )}
 
@@ -81,7 +89,7 @@ export function DashboardClient({ user }: { user: DashUser }) {
         )}
 
         {tab === "Transactions" && (
-          <TransactionsCard transactions={list} onAdd={addTransaction} />
+          <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} />
         )}
 
         {tab === "Settings" && (
@@ -91,4 +99,3 @@ export function DashboardClient({ user }: { user: DashUser }) {
     </div>
   );
 }
-
