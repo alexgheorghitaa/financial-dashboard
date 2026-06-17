@@ -92,6 +92,7 @@ export type Transaction = {
   tint: string;
   fg: string;
   date: string;
+  dateISO: string;
   category: string;
   amount: number;
   type: TxType;

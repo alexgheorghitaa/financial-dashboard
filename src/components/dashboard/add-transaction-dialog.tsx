@@ -57,6 +57,7 @@ export function AddTransactionDialog({ onAdd }: { onAdd: (ui: Transaction, raw: 
       tint: t.tint,
       fg: t.fg,
       date: fmtDate(values.date),
+      dateISO: values.date,
       category: values.category,
       amount: signed,
       type: values.type,

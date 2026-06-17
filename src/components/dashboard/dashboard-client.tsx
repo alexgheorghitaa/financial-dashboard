@@ -11,13 +11,14 @@ import { TransactionsCard } from "@/components/dashboard/transactions-card";
 import { SettingsPanel } from "@/components/dashboard/settings-panel";
 import { savingsGoal, type Transaction } from "@/lib/mock-data";
 import { createTransaction } from "@/app/dashboard/actions";
+import { monthKeyOf, shiftMonth, dayKeyOf, computeBalance, computeMonthly, computeDailySpend, computeChangePct } from "@/lib/derive";
 
 const TABS = ["Overview", "Analytics", "Transactions", "Settings"] as const;
 type Tab = (typeof TABS)[number];
 
 type DashUser = { name?: string | null; email?: string | null; image?: string | null };
 
-export function DashboardClient({ user, transactions }: { user: DashUser; transactions: Transaction[] }) {
+export function DashboardClient({ user, transactions, now }: { user: DashUser; transactions: Transaction[]; now: string }) {
   const [tab, setTab] = useState<Tab>("Overview");
   const [optimisticTx, addOptimistic] = useOptimistic(
     transactions,
@@ -30,6 +31,20 @@ export function DashboardClient({ user, transactions }: { user: DashUser; transa
     });
   }
   const [target, setTarget] = useState(savingsGoal.target);
+
+  const thisKey = monthKeyOf(now);
+  const lastKey = shiftMonth(thisKey, -1);
+  const thisMonth = computeMonthly(optimisticTx, thisKey);
+  const lastMonth = computeMonthly(optimisticTx, lastKey);
+  const balance = computeBalance(optimisticTx);
+
+  const stats = {
+    balance,
+    balanceChange: computeChangePct(balance, balance - thisMonth.savings),
+    dailySpend: computeDailySpend(optimisticTx, dayKeyOf(now)),
+    savings: thisMonth.savings,
+    savingsChange: computeChangePct(thisMonth.savings, lastMonth.savings),
+  };
 
   return (
     <div className="min-h-screen bg-db-bg text-db-text">
@@ -62,7 +77,7 @@ export function DashboardClient({ user, transactions }: { user: DashUser; transa
           <div className="space-y-4">
             <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="flex flex-col gap-4">
-                <StatCards onAddTransaction={() => setTab("Transactions")} />
+                <StatCards stats={stats} onAddTransaction={() => setTab("Transactions")} />
                 <StatisticsCard />
               </div>
               <div className="flex flex-col gap-4">
@@ -78,7 +93,7 @@ export function DashboardClient({ user, transactions }: { user: DashUser; transa
 
         {tab === "Analytics" && (
           <div className="space-y-4">
-            <StatCards onAddTransaction={() => setTab("Transactions")} />
+            <StatCards stats={stats} onAddTransaction={() => setTab("Transactions")} />
             <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
               <StatisticsCard />
               <Card className="rounded-2xl border-db-line bg-db-card p-6" style={{ boxShadow: "var(--db-shadow)" }}>

@@ -21,6 +21,7 @@ function toUiTransaction(t: {
     tint: c.tint,
     fg: c.fg,
     date: fmtDate(t.date),
+    dateISO: t.date.toISOString().slice(0, 10),
     category: t.category,
     amount: t.type === "income" ? t.amount : -t.amount,
     type: t.type,
