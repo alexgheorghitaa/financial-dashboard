@@ -43,3 +43,41 @@ export function computeChangePct(current: number, previous: number): number | nu
   if (!previous) return null;
   return ((current - previous) / previous) * 100;
 }
+
+const SHARE_COLORS = ["#3b9be3", "#22c55e", "#f59e0b", "#ef4444", "#7c3aed", "#14b8a6", "#ec4899", "#64748b"];
+
+export function computeExpenseShares(txs: Transaction[]): { label: string; value: number; color: string }[] {
+  const expenses = txs.filter((t) => t.type === "expense");
+  const total = expenses.reduce((s, t) => s + Math.abs(t.amount), 0);
+  if (total === 0) return [];
+  const byCategory = expenses.reduce((acc, t) => {
+    acc[t.category] = (acc[t.category] ?? 0) + Math.abs(t.amount);
+    return acc;
+  }, {} as Record<string, number>);
+  return Object.entries(byCategory)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, sum], i) => ({
+      label,
+      value: Math.round((sum / total) * 100),
+      color: SHARE_COLORS[i % SHARE_COLORS.length],
+    }));
+}
+
+export function computeAllExpenses(txs: Transaction[], now: string): {
+  daily: number; weekly: number; monthly: number; highlight: { label: string; amount: number };
+} {
+  const expenses = txs.filter((t) => t.type === "expense");
+  const sum = (list: Transaction[]) => list.reduce((s, t) => s + Math.abs(t.amount), 0);
+  const today = dayKeyOf(now);
+  const d = new Date(now);
+  d.setDate(d.getDate() - 7);
+  const weekAgo = d.toISOString().slice(0, 10);
+  const daily = sum(expenses.filter((t) => dayKeyOf(t.dateISO) === today));
+  const weekly = sum(expenses.filter((t) => dayKeyOf(t.dateISO) > weekAgo && dayKeyOf(t.dateISO) <= today));
+  const monthly = sum(expenses.filter((t) => monthKeyOf(t.dateISO) === monthKeyOf(now)));
+  const top = computeExpenseShares(txs)[0];
+  const highlight = top
+    ? { label: top.label, amount: sum(expenses.filter((t) => t.category === top.label)) }
+    : { label: "—", amount: 0 };
+  return { daily, weekly, monthly, highlight };
+}

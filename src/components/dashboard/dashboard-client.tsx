@@ -11,7 +11,7 @@ import { TransactionsCard } from "@/components/dashboard/transactions-card";
 import { SettingsPanel } from "@/components/dashboard/settings-panel";
 import { savingsGoal, type Transaction } from "@/lib/mock-data";
 import { createTransaction } from "@/app/dashboard/actions";
-import { monthKeyOf, shiftMonth, dayKeyOf, computeBalance, computeMonthly, computeDailySpend, computeChangePct } from "@/lib/derive";
+import { monthKeyOf, shiftMonth, dayKeyOf, computeBalance, computeMonthly, computeDailySpend, computeChangePct, computeAllExpenses, computeExpenseShares } from "@/lib/derive";
 
 const TABS = ["Overview", "Analytics", "Transactions", "Settings"] as const;
 type Tab = (typeof TABS)[number];
@@ -45,6 +45,9 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
     savings: thisMonth.savings,
     savingsChange: computeChangePct(thisMonth.savings, lastMonth.savings),
   };
+
+  const shares = computeExpenseShares(optimisticTx);
+  const expenses = computeAllExpenses(optimisticTx, now);
 
   return (
     <div className="min-h-screen bg-db-bg text-db-text">
@@ -82,7 +85,7 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
               </div>
               <div className="flex flex-col gap-4">
                 <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
-                  <AllExpenses />
+                  <AllExpenses shares={shares} expenses={expenses} />
                 </Card>
                 <SavingsGoalCard saved={savingsGoal.saved} target={target} />
               </div>
@@ -97,7 +100,7 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
             <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
               <StatisticsCard />
               <Card className="rounded-2xl border-db-line bg-db-card p-6" style={{ boxShadow: "var(--db-shadow)" }}>
-                <AllExpenses size={200} />
+                <AllExpenses size={200} shares={shares} expenses={expenses} />
               </Card>
             </div>
           </div>
