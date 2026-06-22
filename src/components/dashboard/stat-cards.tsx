@@ -50,7 +50,7 @@ export function StatCards({ stats, onAddTransaction }: { stats: Stats; onAddTran
         <span className="flex size-[42px] items-center justify-center rounded-full bg-db-card2 text-[#F59E0B]"><TrendingDown className="size-5" /></span>
         <p className="mt-3.5 text-sm font-medium text-db-muted">Daily Spend</p>
         <Money value={stats.dailySpend} className="mt-3 text-[26px] font-bold tracking-tight text-db-text" />
-        <p className="mt-3 text-[13px]"><span className="text-db-soft">spent today</span></p>
+        <p className="mt-3 text-[13px]"><span className="text-db-soft">average per day</span></p>
       </Card>
 
       <Card className="flex min-h-[186px] flex-col rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>

@@ -9,10 +9,12 @@ type Totals = { daily: number; weekly: number; monthly: number; highlight: { lab
 export function AllExpenses({
   shares,
   expenses,
+  periodLabel,
   size = 168,
 }: {
   shares: Share[];
   expenses: Totals;
+  periodLabel?: string;
   size?: number;
 }) {
   const hasData = shares.length > 0;
@@ -20,13 +22,16 @@ export function AllExpenses({
   return (
     <>
       <p className="text-[15px] font-semibold text-db-text">
-        All expenses <span className="text-[12.5px] font-medium text-db-soft">· share of spending</span>
+        All expenses{" "}
+        <span className="text-[12.5px] font-medium text-db-soft">
+          {periodLabel ? `· ${periodLabel}` : "· share of spending"}
+        </span>
       </p>
 
       <div className="my-3 flex justify-between gap-2">
         {[
-          { k: "Daily", v: expenses.daily },
-          { k: "Weekly", v: expenses.weekly },
+          { k: "Daily avg", v: expenses.daily },
+          { k: "Weekly avg", v: expenses.weekly },
           { k: "Monthly", v: expenses.monthly },
         ].map((c) => {
           const [int, dec] = usd(c.v).split(".");

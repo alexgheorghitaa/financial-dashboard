@@ -4,10 +4,6 @@ export function monthKeyOf(iso: string): string {
   return iso.slice(0, 7);
 }
 
-export function dayKeyOf(iso: string): string {
-  return iso.slice(0, 10);
-}
-
 export function shiftMonth(monthKey: string, delta: number): string {
   const [y, m] = monthKey.split("-").map(Number);
   const d = new Date(y, m - 1 + delta, 1);
@@ -15,8 +11,20 @@ export function shiftMonth(monthKey: string, delta: number): string {
   return `${d.getFullYear()}-${mm}`;
 }
 
-export function computeBalance(txs: Transaction[]): number {
-  return txs.reduce((sum, t) => sum + t.amount, 0);
+export function daysInMonth(monthKey: string): number {
+  const [y, m] = monthKey.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+export function monthLabel(monthKey: string): string {
+  const d = new Date(monthKey + "-01T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+export function computeBalanceUntil(txs: Transaction[], monthKey: string): number {
+  return txs
+    .filter((t) => monthKeyOf(t.dateISO) <= monthKey)
+    .reduce((sum, t) => sum + t.amount, 0);
 }
 
 export function computeMonthly(
@@ -31,12 +39,6 @@ export function computeMonthly(
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + Math.abs(t.amount), 0);
   return { income, expenses, savings: income - expenses };
-}
-
-export function computeDailySpend(txs: Transaction[], dayKey: string): number {
-  return txs
-    .filter((t) => t.type === "expense" && dayKeyOf(t.dateISO) === dayKey)
-    .reduce((s, t) => s + Math.abs(t.amount), 0);
 }
 
 export function computeChangePct(current: number, previous: number): number | null {
@@ -63,21 +65,17 @@ export function computeExpenseShares(txs: Transaction[]): { label: string; value
     }));
 }
 
-export function computeAllExpenses(txs: Transaction[], now: string): {
+export function computeAllExpenses(txs: Transaction[], monthKey: string): {
   daily: number; weekly: number; monthly: number; highlight: { label: string; amount: number };
 } {
-  const expenses = txs.filter((t) => t.type === "expense");
-  const sum = (list: Transaction[]) => list.reduce((s, t) => s + Math.abs(t.amount), 0);
-  const today = dayKeyOf(now);
-  const d = new Date(now);
-  d.setDate(d.getDate() - 7);
-  const weekAgo = d.toISOString().slice(0, 10);
-  const daily = sum(expenses.filter((t) => dayKeyOf(t.dateISO) === today));
-  const weekly = sum(expenses.filter((t) => dayKeyOf(t.dateISO) > weekAgo && dayKeyOf(t.dateISO) <= today));
-  const monthly = sum(expenses.filter((t) => monthKeyOf(t.dateISO) === monthKeyOf(now)));
-  const top = computeExpenseShares(txs)[0];
+  const monthTx = txs.filter((t) => t.type === "expense" && monthKeyOf(t.dateISO) === monthKey);
+  const monthly = monthTx.reduce((s, t) => s + Math.abs(t.amount), 0);
+  const days = daysInMonth(monthKey);
+  const daily = monthly / days;
+  const weekly = monthly / (days / 7);
+  const top = computeExpenseShares(monthTx)[0];
   const highlight = top
-    ? { label: top.label, amount: sum(expenses.filter((t) => t.category === top.label)) }
+    ? { label: top.label, amount: monthTx.filter((t) => t.category === top.label).reduce((s, t) => s + Math.abs(t.amount), 0) }
     : { label: "—", amount: 0 };
   return { daily, weekly, monthly, highlight };
 }
