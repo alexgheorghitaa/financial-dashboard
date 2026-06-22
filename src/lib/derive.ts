@@ -79,3 +79,33 @@ export function computeAllExpenses(txs: Transaction[], monthKey: string): {
     : { label: "—", amount: 0 };
   return { daily, weekly, monthly, highlight };
 }
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export function computeMonthlySeries(txs: Transaction[], year: number): { month: string; income: number; expenses: number }[] {
+  return MONTH_NAMES.map((name, i) => {
+    const monthKey = `${year}-${String(i + 1).padStart(2, "0")}`;
+    const m = computeMonthly(txs, monthKey);
+    return { month: name, income: m.income, expenses: m.expenses };
+  });
+}
+
+export function computeWeeklySeries(txs: Transaction[], monthKey: string): { week: string; expenses: number }[] {
+  const buckets = [0, 0, 0, 0, 0];
+  txs
+    .filter((t) => t.type === "expense" && monthKeyOf(t.dateISO) === monthKey)
+    .forEach((t) => {
+      const day = Number(t.dateISO.slice(8, 10));
+      const idx = Math.min(4, Math.floor((day - 1) / 7));
+      buckets[idx] += Math.abs(t.amount);
+    });
+  return buckets.map((expenses, i) => ({ week: `W${i + 1}`, expenses }));
+}
+
+export function computeAverages(txs: Transaction[], year: number): { income: number; expenses: number } {
+  const withData = computeMonthlySeries(txs, year).filter((m) => m.income > 0 || m.expenses > 0);
+  if (withData.length === 0) return { income: 0, expenses: 0 };
+  const sumInc = withData.reduce((s, m) => s + m.income, 0);
+  const sumExp = withData.reduce((s, m) => s + m.expenses, 0);
+  return { income: sumInc / withData.length, expenses: sumExp / withData.length };
+}

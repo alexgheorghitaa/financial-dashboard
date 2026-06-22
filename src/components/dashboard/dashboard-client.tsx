@@ -12,7 +12,7 @@ import { SettingsPanel } from "@/components/dashboard/settings-panel";
 import { savingsGoal, type Transaction } from "@/lib/mock-data";
 import { createTransaction } from "@/app/dashboard/actions";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
-import { monthKeyOf, shiftMonth, computeMonthly, computeBalanceUntil, daysInMonth, computeChangePct, computeAllExpenses, computeExpenseShares, monthLabel } from "@/lib/derive";
+import { monthKeyOf, shiftMonth, computeMonthly, computeMonthlySeries, computeWeeklySeries, computeAverages, computeBalanceUntil, daysInMonth, computeChangePct, computeAllExpenses, computeExpenseShares, monthLabel } from "@/lib/derive";
 
 const TABS = ["Overview", "Analytics", "Transactions", "Settings"] as const;
 type Tab = (typeof TABS)[number];
@@ -53,6 +53,12 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
   const shares = computeExpenseShares(monthTx);
   const expenses = computeAllExpenses(optimisticTx, selectedMonth);
 
+  const selectedYear = Number(selectedMonth.slice(0, 4));
+  const monthlySeries = computeMonthlySeries(optimisticTx, selectedYear);
+  const weeklySeries = computeWeeklySeries(optimisticTx, selectedMonth);
+  const averages = computeAverages(optimisticTx, selectedYear);
+  const referenceMonth = new Date(selectedMonth + "-01T00:00:00").toLocaleDateString("en-US", { month: "short" });
+
   return (
     <div className="min-h-screen bg-db-bg text-db-text">
       <Topbar user={user} />
@@ -90,7 +96,13 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
             <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="flex flex-col gap-4">
                 <StatCards stats={stats} onAddTransaction={() => setTab("Transactions")} />
-                <StatisticsCard />
+                <StatisticsCard
+                  monthlyData={monthlySeries}
+                  weeklyData={weeklySeries}
+                  averages={averages}
+                  referenceMonth={referenceMonth}
+                  year={selectedYear}
+                />
               </div>
               <div className="flex flex-col gap-4">
                 <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
@@ -107,7 +119,13 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
           <div className="space-y-4">
             <StatCards stats={stats} onAddTransaction={() => setTab("Transactions")} />
             <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-              <StatisticsCard />
+              <StatisticsCard
+                monthlyData={monthlySeries}
+                weeklyData={weeklySeries}
+                averages={averages}
+                referenceMonth={referenceMonth}
+                year={selectedYear}
+              />
               <Card className="rounded-2xl border-db-line bg-db-card p-6" style={{ boxShadow: "var(--db-shadow)" }}>
                 <AllExpenses size={200} shares={shares} expenses={expenses} periodLabel={monthLabel(selectedMonth)} />
               </Card>

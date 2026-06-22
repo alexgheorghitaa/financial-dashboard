@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { StatisticsChart } from "@/components/dashboard/statistics-chart";
-import { averages, usd, pct } from "@/lib/mock-data";
+import { StatisticsChart, type MonthPoint, type WeekPoint } from "@/components/dashboard/statistics-chart";
+import { usd } from "@/lib/mock-data";
 
 function Money({ value }: { value: number }) {
   const [int, dec] = usd(value).split(".");
@@ -15,7 +15,21 @@ const RANGES = [
   { key: "weekly", label: "Weekly" },
 ] as const;
 
-export function StatisticsCard({ showAverages = true }: { showAverages?: boolean }) {
+export function StatisticsCard({
+  monthlyData,
+  weeklyData,
+  averages,
+  referenceMonth,
+  year,
+  showAverages = true,
+}: {
+  monthlyData: MonthPoint[];
+  weeklyData: WeekPoint[];
+  averages: { income: number; expenses: number };
+  referenceMonth?: string;
+  year: number;
+  showAverages?: boolean;
+}) {
   const [range, setRange] = useState<"monthly" | "weekly">("monthly");
 
   return (
@@ -49,19 +63,19 @@ export function StatisticsCard({ showAverages = true }: { showAverages?: boolean
         </div>
       </div>
 
-      <StatisticsChart range={range} />
+      <StatisticsChart range={range} monthlyData={monthlyData} weeklyData={weeklyData} referenceMonth={referenceMonth} />
 
       {showAverages && (
         <div className="mt-4 grid grid-cols-2 gap-5 border-t border-db-line pt-4">
           <div>
             <p className="mb-1.5 text-[13px] text-db-muted">Average income</p>
-            <div className="flex items-baseline gap-2 text-[22px] font-bold tracking-tight text-db-text"><Money value={averages.income.amount} /> <span className="text-[13px] font-bold text-[#16A34A] dark:text-[#4ade80]">{pct(averages.income.changePct)}</span></div>
-            <p className="mt-1.5 text-[13px] text-db-soft">compare to last month</p>
+            <div className="flex items-baseline gap-2 text-[22px] font-bold tracking-tight text-db-text"><Money value={averages.income} /></div>
+            <p className="mt-1.5 text-[13px] text-db-soft">monthly average · {year}</p>
           </div>
           <div>
             <p className="mb-1.5 text-[13px] text-db-muted">Average expenses</p>
-            <div className="flex items-baseline gap-2 text-[22px] font-bold tracking-tight text-db-text"><Money value={averages.expenses.amount} /> <span className="text-[13px] font-bold text-[#16A34A] dark:text-[#4ade80]">{pct(averages.expenses.changePct)}</span></div>
-            <p className="mt-1.5 text-[13px] text-db-soft">compare to last month</p>
+            <div className="flex items-baseline gap-2 text-[22px] font-bold tracking-tight text-db-text"><Money value={averages.expenses} /></div>
+            <p className="mt-1.5 text-[13px] text-db-soft">monthly average · {year}</p>
           </div>
         </div>
       )}
