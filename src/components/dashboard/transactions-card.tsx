@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddTransactionDialog } from "@/components/dashboard/add-transaction-dialog";
-import { usd, type Transaction, type NewTransactionInput} from "@/lib/mock-data";
+import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
+import { usd, categories, type Transaction, type NewTransactionInput } from "@/lib/mock-data";
 import { Search, MoreHorizontal } from "lucide-react";
+import { monthKeyOf } from "@/lib/derive";
 
 const statusClass: Record<string, string> = {
   Completed: "bg-[#EAF7EF] text-[#16A34A] dark:bg-[#16a34a]/15 dark:text-[#4ade80]",
@@ -23,20 +25,58 @@ const FILTERS = [
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
+type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
+
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "date-desc", label: "Newest first" },
+  { key: "date-asc", label: "Oldest first" },
+  { key: "amount-desc", label: "Amount: high → low" },
+  { key: "amount-asc", label: "Amount: low → high" },
+];
+
+const selectClass =
+  "h-9 rounded-[10px] border border-db-line bg-db-card2 px-2.5 text-[13px] font-semibold text-db-text2 outline-none focus:border-db-accent";
 
 export function TransactionsCard({
-  transactions, onAdd,
-}: { transactions: Transaction[]; onAdd: (ui: Transaction, raw: NewTransactionInput) => void }) {
+  transactions, onAdd, withControls = false, nowKey = "",
+}: {
+  transactions: Transaction[];
+  onAdd: (ui: Transaction, raw: NewTransactionInput) => void;
+  withControls?: boolean;
+  nowKey?: string;
+}) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
+  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [sort, setSort] = useState<SortKey>("date-desc");
+  const [category, setCategory] = useState<string>("all");
 
   const rows = useMemo(() => {
-    return transactions.filter((t) => {
+    let result = transactions.filter((t) => {
       if (filter !== "all" && t.type !== filter) return false;
       if (query && !`${t.name} ${t.category}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
-  }, [transactions, filter, query]);
+
+    if (withControls && monthFilter !== "all") {
+      result = result.filter((t) => monthKeyOf(t.dateISO) === monthFilter);
+    }
+
+    if (withControls && category !== "all") {
+      result = result.filter((t) => t.category === category);
+    }
+
+    if (withControls) {
+      result = [...result].sort((a, b) => {
+        if (sort === "date-asc") return a.dateISO < b.dateISO ? -1 : 1;
+        if (sort === "date-desc") return a.dateISO > b.dateISO ? -1 : 1;
+        if (sort === "amount-asc") return Math.abs(a.amount) - Math.abs(b.amount);
+        return Math.abs(b.amount) - Math.abs(a.amount);
+      });
+    }
+
+    return result;
+  }, [transactions, filter, query, monthFilter, category, sort, withControls]);
 
   return (
     <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
@@ -54,20 +94,35 @@ export function TransactionsCard({
         </div>
       </div>
 
-      <div className="mb-1 flex gap-1.5">
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
-              filter === f.key
-                ? "bg-db-accent text-white"
-                : "border border-db-line text-db-text2 hover:bg-db-card2"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex gap-1.5">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
+                filter === f.key
+                  ? "bg-db-accent text-white"
+                  : "border border-db-line text-db-text2 hover:bg-db-card2"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {withControls && (
+          <div className="flex flex-wrap items-center gap-2.5">
+            <PeriodSwitcher selectedMonth={monthFilter} nowKey={nowKey} onSelect={setMonthFilter} allowAll />
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectClass} aria-label="Filter by category">
+              <option value="all">All categories</option>
+              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className={selectClass} aria-label="Sort transactions">
+              {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       <Table>

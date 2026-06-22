@@ -5,24 +5,31 @@ import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { shiftMonth, monthLabel } from "@/lib/derive";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const ALL = "all";
 
 export function PeriodSwitcher({
   selectedMonth,
   nowKey,
   onSelect,
+  allowAll = false,
 }: {
   selectedMonth: string;
   nowKey: string;
   onSelect: (monthKey: string) => void;
+  allowAll?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const selectedYear = Number(selectedMonth.slice(0, 4));
+  const isAll = allowAll && selectedMonth === ALL;
+  const selectedYear = Number((isAll ? nowKey : selectedMonth).slice(0, 4));
   const [viewYear, setViewYear] = useState(selectedYear);
 
-  const canGoNext = selectedMonth < nowKey;
-  const isCurrent = selectedMonth === nowKey;
+  const canGoNext = !isAll && selectedMonth < nowKey;
   const nowYear = Number(nowKey.slice(0, 4));
   const nowMonthNum = Number(nowKey.slice(5, 7));
+
+  const resetTarget = allowAll ? ALL : nowKey;
+  const resetLabel = allowAll ? "All" : "Today";
+  const resetDisabled = selectedMonth === resetTarget;
 
   function openPicker() {
     setViewYear(selectedYear);
@@ -40,16 +47,17 @@ export function PeriodSwitcher({
       <div className="flex items-center rounded-[10px] border border-db-line bg-db-card">
         <button
           onClick={() => onSelect(shiftMonth(selectedMonth, -1))}
+          disabled={isAll}
           aria-label="Previous month"
-          className="flex size-9 items-center justify-center rounded-l-[10px] text-db-text2 transition hover:bg-db-card2 hover:text-db-text"
+          className="flex size-9 items-center justify-center rounded-l-[10px] text-db-text2 transition hover:bg-db-card2 hover:text-db-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <ChevronLeft className="size-[18px]" />
         </button>
         <button
           onClick={openPicker}
-          className="flex min-w-[128px] items-center justify-center gap-1.5 px-2 py-2 text-[13.5px] font-semibold text-db-text transition hover:text-db-accent"
+          className="flex min-w-[136px] items-center justify-center gap-1.5 px-2 py-2 text-[13.5px] font-semibold text-db-text transition hover:text-db-accent"
         >
-          {monthLabel(selectedMonth)}
+          {isAll ? "All transactions" : monthLabel(selectedMonth)}
           <ChevronDown className={`size-[15px] text-db-soft transition ${open ? "rotate-180" : ""}`} />
         </button>
         <button
@@ -63,11 +71,11 @@ export function PeriodSwitcher({
       </div>
 
       <button
-        onClick={() => onSelect(nowKey)}
-        disabled={isCurrent}
+        onClick={() => onSelect(resetTarget)}
+        disabled={resetDisabled}
         className="rounded-[10px] border border-db-line px-3 py-2 text-[13px] font-semibold text-db-text2 transition hover:bg-db-card2 hover:text-db-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
       >
-        Today
+        {resetLabel}
       </button>
 
       {open && (

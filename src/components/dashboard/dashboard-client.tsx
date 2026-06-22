@@ -134,7 +134,7 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
         )}
 
         {tab === "Transactions" && (
-          <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} />
+          <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} withControls nowKey={nowKey} />
         )}
 
         {tab === "Settings" && (
