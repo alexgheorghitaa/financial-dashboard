@@ -12,11 +12,13 @@ export function PeriodSwitcher({
   nowKey,
   onSelect,
   allowAll = false,
+  minMonth = "",
 }: {
   selectedMonth: string;
   nowKey: string;
   onSelect: (monthKey: string) => void;
   allowAll?: boolean;
+  minMonth?: string;
 }) {
   const [open, setOpen] = useState(false);
   const isAll = allowAll && selectedMonth === ALL;
@@ -24,8 +26,10 @@ export function PeriodSwitcher({
   const [viewYear, setViewYear] = useState(selectedYear);
 
   const canGoNext = !isAll && selectedMonth < nowKey;
+  const canGoPrev = !isAll && (!minMonth || selectedMonth > minMonth);
   const nowYear = Number(nowKey.slice(0, 4));
   const nowMonthNum = Number(nowKey.slice(5, 7));
+  const minYear = minMonth ? Number(minMonth.slice(0, 4)) : 0;
 
   const resetTarget = allowAll ? ALL : nowKey;
   const resetLabel = allowAll ? "All" : "Today";
@@ -47,7 +51,7 @@ export function PeriodSwitcher({
       <div className="flex items-center rounded-[10px] border border-db-line bg-db-card">
         <button
           onClick={() => onSelect(shiftMonth(selectedMonth, -1))}
-          disabled={isAll}
+          disabled={!canGoPrev}
           aria-label="Previous month"
           className="flex size-9 items-center justify-center rounded-l-[10px] text-db-text2 transition hover:bg-db-card2 hover:text-db-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
         >
@@ -93,8 +97,9 @@ export function PeriodSwitcher({
             <div className="mb-2.5 flex items-center justify-between">
               <button
                 onClick={() => setViewYear((y) => y - 1)}
+                disabled={minYear > 0 && viewYear <= minYear}
                 aria-label="Previous year"
-                className="flex size-7 items-center justify-center rounded-md text-db-text2 transition hover:bg-db-card2 hover:text-db-text"
+                className="flex size-7 items-center justify-center rounded-md text-db-text2 transition hover:bg-db-card2 hover:text-db-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
               >
                 <ChevronLeft className="size-4" />
               </button>
@@ -111,12 +116,14 @@ export function PeriodSwitcher({
 
             <div className="grid grid-cols-3 gap-1.5">
               {MONTHS.map((m, i) => {
+                const monthKey = `${viewYear}-${String(i + 1).padStart(2, "0")}`;
                 const isFuture = viewYear > nowYear || (viewYear === nowYear && i + 1 > nowMonthNum);
-                const isSel = selectedMonth === `${viewYear}-${String(i + 1).padStart(2, "0")}`;
+                const isBeforeMin = !!minMonth && monthKey < minMonth;
+                const isSel = selectedMonth === monthKey;
                 return (
                   <button
                     key={m}
-                    disabled={isFuture}
+                    disabled={isFuture || isBeforeMin}
                     onClick={() => pick(i)}
                     className={`rounded-lg py-2 text-[13px] font-semibold transition ${
                       isSel ? "bg-db-accent text-white" : "text-db-text2 hover:bg-db-card2"

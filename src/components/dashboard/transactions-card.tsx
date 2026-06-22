@@ -38,12 +38,13 @@ const selectClass =
   "h-9 rounded-[10px] border border-db-line bg-db-card2 px-2.5 text-[13px] font-semibold text-db-text2 outline-none focus:border-db-accent";
 
 export function TransactionsCard({
-  transactions, onAdd, withControls = false, nowKey = "",
+  transactions, onAdd, withControls = false, nowKey = "", minMonth = "",
 }: {
   transactions: Transaction[];
   onAdd: (ui: Transaction, raw: NewTransactionInput) => void;
   withControls?: boolean;
   nowKey?: string;
+  minMonth?: string;
 }) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
@@ -113,7 +114,7 @@ export function TransactionsCard({
 
         {withControls && (
           <div className="flex flex-wrap items-center gap-2.5">
-            <PeriodSwitcher selectedMonth={monthFilter} nowKey={nowKey} onSelect={setMonthFilter} allowAll />
+            <PeriodSwitcher selectedMonth={monthFilter} nowKey={nowKey} onSelect={setMonthFilter} allowAll minMonth={minMonth} />
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectClass} aria-label="Filter by category">
               <option value="all">All categories</option>
               {categories.map((c) => <option key={c} value={c}>{c}</option>)}

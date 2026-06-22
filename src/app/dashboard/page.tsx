@@ -9,5 +9,6 @@ export default async function DashboardPage() {
   const data = await getTransactionsForUser(session.user.id);
   const transactions = data?.transactions ?? [];
   const now = new Date().toISOString();
-  return <DashboardClient user={session.user} transactions={transactions} now={now} />;
+  const accountCreatedAt = data?.account.createdAt ?? now;
+  return <DashboardClient user={session.user} transactions={transactions} now={now} accountCreatedAt={accountCreatedAt} />;
 }

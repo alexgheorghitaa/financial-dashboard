@@ -38,7 +38,11 @@ export async function getTransactionsForUser(userId: string) {
   if (!account) return null;
 
   return {
-    account: { id: account.id, name: account.name },
+    account: {
+      id: account.id,
+      name: account.name,
+      createdAt: account.createdAt.toISOString(),
+    },
     transactions: account.transactions.map(toUiTransaction),
   };
 }

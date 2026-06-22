@@ -19,7 +19,7 @@ type Tab = (typeof TABS)[number];
 
 type DashUser = { name?: string | null; email?: string | null; image?: string | null };
 
-export function DashboardClient({ user, transactions, now }: { user: DashUser; transactions: Transaction[]; now: string }) {
+export function DashboardClient({ user, transactions, now, accountCreatedAt }: { user: DashUser; transactions: Transaction[]; now: string; accountCreatedAt: string }) {
   const [tab, setTab] = useState<Tab>("Overview");
   const [optimisticTx, addOptimistic] = useOptimistic(
     transactions,
@@ -35,6 +35,12 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
 
   const nowKey = monthKeyOf(now);
   const [selectedMonth, setSelectedMonth] = useState(() => nowKey);
+
+  const createdMonth = monthKeyOf(accountCreatedAt);
+  const minMonth = optimisticTx.reduce(
+    (min, t) => (monthKeyOf(t.dateISO) < min ? monthKeyOf(t.dateISO) : min),
+    createdMonth,
+  );
 
   const selMonth = computeMonthly(optimisticTx, selectedMonth);
   const prevOfSel = computeMonthly(optimisticTx, shiftMonth(selectedMonth, -1));
@@ -70,7 +76,7 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
             <p className="mt-1 text-sm text-db-muted">This is your finance report</p>
             {(tab === "Overview" || tab === "Analytics") && (
               <div className="mt-3">
-                <PeriodSwitcher selectedMonth={selectedMonth} nowKey={nowKey} onSelect={setSelectedMonth} />
+                <PeriodSwitcher selectedMonth={selectedMonth} nowKey={nowKey} onSelect={setSelectedMonth} minMonth={minMonth} />
               </div>
             )}
           </div>
@@ -134,7 +140,7 @@ export function DashboardClient({ user, transactions, now }: { user: DashUser; t
         )}
 
         {tab === "Transactions" && (
-          <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} withControls nowKey={nowKey} />
+          <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} withControls nowKey={nowKey} minMonth={minMonth} />
         )}
 
         {tab === "Settings" && (

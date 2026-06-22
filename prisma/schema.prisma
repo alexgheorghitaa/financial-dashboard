@@ -32,6 +32,7 @@ model Account{
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  savingsContributions SavingsContribution[]
   createdAt    DateTime      @default(now())
 }
 
@@ -46,5 +47,15 @@ model Transaction {
   accountId String
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdAt DateTime          @default(now())
-  
+
+}
+
+model SavingsContribution {
+  id        String            @id @default(cuid())
+  amount    Float
+  date      DateTime          @default(now())
+  repeat    TransactionRepeat @default(none)
+  accountId String
+  account   Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt DateTime          @default(now())
 }
