@@ -44,6 +44,7 @@ model Transaction {
   type      TransactionType
   repeat    TransactionRepeat @default(none)
   date      DateTime          @default(now())
+  endDate   DateTime?
   accountId String
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdAt DateTime          @default(now())
@@ -55,6 +56,7 @@ model SavingsContribution {
   amount    Float
   date      DateTime          @default(now())
   repeat    TransactionRepeat @default(none)
+  endDate   DateTime?
   accountId String
   account   Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdAt DateTime          @default(now())

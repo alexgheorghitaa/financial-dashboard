@@ -6,17 +6,30 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "next-themes";
-import { user, savingsGoal, usd } from "@/lib/mock-data";
+import { usd } from "@/lib/mock-data";
 
 const fieldClass =
   "h-11 w-full rounded-lg border border-db-line bg-db-card2 px-3 text-sm text-db-text outline-none focus:border-db-accent";
 
+function initials(name: string) {
+  return name.trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "U";
+}
+
 export function SettingsPanel({
-  saved, target, onTargetChange,
-}: { saved: number; target: number; onTargetChange: (n: number) => void }) {
+  saved, target, onTargetChange, name, email, onNameChange,
+}: {
+  saved: number;
+  target: number;
+  onTargetChange: (n: number) => void;
+  name: string;
+  email: string;
+  onNameChange: (name: string) => void;
+}) {
   const { resolvedTheme, setTheme } = useTheme();
   const [draft, setDraft] = useState(String(target));
   const [justSaved, setJustSaved] = useState(false);
+  const [nameDraft, setNameDraft] = useState(name);
+  const [nameSaved, setNameSaved] = useState(false);
 
   function save() {
     const n = Number(draft);
@@ -27,28 +40,41 @@ export function SettingsPanel({
     }
   }
 
+  function saveName() {
+    const next = nameDraft.trim();
+    if (next.length >= 2) {
+      onNameChange(next);
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 1600);
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card className="rounded-2xl border-db-line bg-db-card p-6" style={{ boxShadow: "var(--db-shadow)" }}>
         <h3 className="text-[17px] font-bold tracking-tight text-db-text">Profile</h3>
-        <p className="mt-1 text-[13.5px] text-db-muted">Your account details (demo data).</p>
+        <p className="mt-1 text-[13.5px] text-db-muted">Your account details.</p>
 
         <div className="mt-5 flex items-center gap-4">
-          <Avatar className="size-16"><AvatarImage src={user.avatar} alt={user.name} /><AvatarFallback>JB</AvatarFallback></Avatar>
+          <Avatar className="size-16"><AvatarImage src={undefined} alt={name} /><AvatarFallback>{initials(name)}</AvatarFallback></Avatar>
           <div>
-            <p className="text-base font-bold text-db-text">{user.name}</p>
-            <p className="text-sm text-db-soft">{user.handle}</p>
+            <p className="text-base font-bold text-db-text">{name}</p>
+            <p className="text-sm text-db-soft">{email}</p>
           </div>
         </div>
 
         <div className="mt-6 space-y-4">
           <div>
-            <Label className="mb-1.5 block text-db-text2">Full name</Label>
-            <input defaultValue={user.name} className={fieldClass} />
+            <Label htmlFor="fullname" className="mb-1.5 block text-db-text2">Full name</Label>
+            <input id="fullname" value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} className={fieldClass} />
+            <div className="mt-3 flex items-center gap-3">
+              <Button onClick={saveName} className="bg-db-accent text-white hover:opacity-90">Save name</Button>
+              {nameSaved && <span className="text-sm font-semibold text-db-accent">Saved ✓</span>}
+            </div>
           </div>
           <div>
             <Label className="mb-1.5 block text-db-text2">Email</Label>
-            <input defaultValue="jaylon@fintrack.app" className={fieldClass} />
+            <input value={email} readOnly disabled className={`${fieldClass} cursor-not-allowed opacity-70`} />
           </div>
           <div className="flex items-center justify-between rounded-lg border border-db-line bg-db-card2 px-4 py-3">
             <div>
@@ -67,7 +93,7 @@ export function SettingsPanel({
 
       <Card className="rounded-2xl border-db-line bg-db-card p-6" style={{ boxShadow: "var(--db-shadow)" }}>
         <h3 className="text-[17px] font-bold tracking-tight text-db-text">Savings goal</h3>
-        <p className="mt-1 text-[13.5px] text-db-muted">Set your target for “{savingsGoal.title}”.</p>
+        <p className="mt-1 text-[13.5px] text-db-muted">Set your target for “Emergency fund”.</p>
 
         <div className="mt-5">
           <Label htmlFor="target" className="mb-1.5 block text-db-text2">Target amount (USD)</Label>

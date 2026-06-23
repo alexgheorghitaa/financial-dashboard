@@ -63,6 +63,8 @@ export type Transaction = {
   amount: number;
   type: TxType;
   status: TxStatus;
+  repeat: "none" | "monthly";
+  endISO: string | null;
 };
 
 export type SavingsContributionUi = {
@@ -70,6 +72,7 @@ export type SavingsContributionUi = {
   amount: number;
   dateISO: string;
   repeat: "none" | "monthly";
+  endISO: string | null;
 };
 
 export const categories = [

@@ -18,6 +18,8 @@ export function AllExpenses({
   size?: number;
 }) {
   const hasData = shares.length > 0;
+  const MIN_SLICE = 4;
+  const pieData = shares.map((s) => ({ ...s, value: Math.max(s.value, MIN_SLICE) }));
 
   return (
     <>
@@ -52,7 +54,7 @@ export function AllExpenses({
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={shares}
+                  data={pieData}
                   dataKey="value"
                   nameKey="label"
                   cx="50%"
@@ -65,7 +67,7 @@ export function AllExpenses({
                   endAngle={-270}
                   stroke="none"
                 >
-                  {shares.map((e) => (
+                  {pieData.map((e) => (
                     <Cell key={e.label} fill={e.color} />
                   ))}
                 </Pie>
@@ -82,7 +84,7 @@ export function AllExpenses({
               <li key={e.label} className="flex items-center gap-2.5 text-sm text-db-text2">
                 <i className="size-[9px] rounded-full" style={{ background: e.color }} />
                 {e.label}
-                <b className="ml-auto font-bold text-db-text">{e.value}%</b>
+                <b className="ml-auto font-bold text-db-text">{e.value === 0 ? "<1" : e.value}%</b>
               </li>
             ))}
           </ul>

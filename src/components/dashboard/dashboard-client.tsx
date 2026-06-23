@@ -10,9 +10,18 @@ import { SavingsGoalCard } from "@/components/dashboard/savings-goal-card";
 import { TransactionsCard } from "@/components/dashboard/transactions-card";
 import { SettingsPanel } from "@/components/dashboard/settings-panel";
 import { type Transaction } from "@/lib/mock-data";
-import { createTransaction, addSavingsContribution } from "@/app/dashboard/actions";
+import {
+  createTransaction,
+  addSavingsContribution,
+  stopRecurringTransaction,
+  deleteTransaction,
+  stopRecurringSavings,
+  deleteSavings,
+  updateSavingsGoal,
+  updateUserName,
+} from "@/app/dashboard/actions";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
-import { monthKeyOf, shiftMonth, computeMonthly, computeMonthlySeries, computeWeeklySeries, computeSaved, computeAverages, computeBalanceUntil, daysInMonth, computeChangePct, computeAllExpenses, computeExpenseShares, monthLabel } from "@/lib/derive";
+import { monthKeyOf, shiftMonth, computeMonthly, computeMonthlySeries, computeWeeklySeries, computeSaved, computeAverages, computeBalanceUntil, daysInMonth, computeChangePct, computeAllExpenses, computeExpenseShares, monthLabel, occursInMonth } from "@/lib/derive";
 
 const TABS = ["Overview", "Analytics", "Transactions", "Settings"] as const;
 type Tab = (typeof TABS)[number];
@@ -24,7 +33,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
   transactions: Transaction[];
   now: string;
   accountCreatedAt: string;
-  contributions?: { id: string; amount: number; dateISO: string; repeat: "none" | "monthly" }[];
+  contributions?: { id: string; amount: number; dateISO: string; repeat: "none" | "monthly"; endISO: string | null }[];
   savingsGoal?: number;
 }) {
   const [tab, setTab] = useState<Tab>("Overview");
@@ -44,13 +53,39 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
       await addSavingsContribution(input);
     });
   }
+
+  function handleStopRecurring(id: string, kind: "transaction" | "savings") {
+    startTransition(async () => {
+      await (kind === "savings" ? stopRecurringSavings(id) : stopRecurringTransaction(id));
+    });
+  }
+
+  function handleDelete(id: string, kind: "transaction" | "savings") {
+    startTransition(async () => {
+      await (kind === "savings" ? deleteSavings(id) : deleteTransaction(id));
+    });
+  }
+
   const [target, setTarget] = useState(savingsGoal);
+
+  function handleTargetChange(n: number) {
+    setTarget(n);
+    startTransition(async () => {
+      await updateSavingsGoal(n);
+    });
+  }
+
+  function handleNameChange(name: string) {
+    startTransition(async () => {
+      await updateUserName(name);
+    });
+  }
 
   const nowKey = monthKeyOf(now);
   const [selectedMonth, setSelectedMonth] = useState(() => nowKey);
 
   const createdMonth = monthKeyOf(accountCreatedAt);
-  const minMonth = optimisticTx.reduce(
+  const minMonth = [...optimisticTx, ...contributions].reduce(
     (min, t) => (monthKeyOf(t.dateISO) < min ? monthKeyOf(t.dateISO) : min),
     createdMonth,
   );
@@ -63,6 +98,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
   const saved = computeSaved(contributions, selectedMonth);
   const savedNow = computeSaved(contributions, nowKey);
   const available = balance - saved;
+  const availableNow = computeBalanceUntil(optimisticTx, nowKey) - savedNow;
 
   const stats = {
     balance: available,
@@ -73,14 +109,14 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
     saved: savedNow,
   };
 
-  const monthTx = optimisticTx.filter((t) => monthKeyOf(t.dateISO) === selectedMonth);
+  const monthTx = optimisticTx.filter((t) => occursInMonth(t, selectedMonth));
   const shares = computeExpenseShares(monthTx);
   const expenses = computeAllExpenses(optimisticTx, selectedMonth);
 
   const selectedYear = Number(selectedMonth.slice(0, 4));
-  const monthlySeries = computeMonthlySeries(optimisticTx, selectedYear);
+  const monthlySeries = computeMonthlySeries(optimisticTx, selectedYear, nowKey);
   const weeklySeries = computeWeeklySeries(optimisticTx, selectedMonth);
-  const averages = computeAverages(optimisticTx, selectedYear);
+  const averages = computeAverages(optimisticTx, selectedYear, nowKey);
   const referenceMonth = new Date(selectedMonth + "-01T00:00:00").toLocaleDateString("en-US", { month: "short" });
 
   return (
@@ -132,7 +168,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
                 <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
                   <AllExpenses shares={shares} expenses={expenses} periodLabel={monthLabel(selectedMonth)} />
                 </Card>
-                <SavingsGoalCard saved={savedNow} target={target} onAddSavings={handleAddSavings} />
+                <SavingsGoalCard saved={savedNow} target={target} available={availableNow} onAddSavings={handleAddSavings} />
               </div>
             </div>
             <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} />
@@ -158,11 +194,27 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
         )}
 
         {tab === "Transactions" && (
-          <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} withControls nowKey={nowKey} minMonth={minMonth} />
+          <TransactionsCard
+            transactions={optimisticTx}
+            contributions={contributions}
+            onAdd={handleAdd}
+            withControls
+            nowKey={nowKey}
+            minMonth={minMonth}
+            onStopRecurring={handleStopRecurring}
+            onDelete={handleDelete}
+          />
         )}
 
         {tab === "Settings" && (
-          <SettingsPanel saved={savedNow} target={target} onTargetChange={setTarget} />
+          <SettingsPanel
+            saved={savedNow}
+            target={target}
+            onTargetChange={handleTargetChange}
+            name={user.name ?? ""}
+            email={user.email ?? ""}
+            onNameChange={handleNameChange}
+          />
         )}
       </main>
     </div>

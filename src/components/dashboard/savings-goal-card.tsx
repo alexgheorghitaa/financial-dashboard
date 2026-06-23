@@ -4,10 +4,11 @@ import { usd } from "@/lib/mock-data";
 import { AddSavingsDialog } from "@/components/dashboard/add-savings-dialog";
 
 export function SavingsGoalCard({
-  saved, target, onAddSavings,
+  saved, target, available, onAddSavings,
 }: {
   saved: number;
   target: number;
+  available: number;
   onAddSavings: (input: { amount: number; repeat: "none" | "monthly" }) => void;
 }) {
   const goalPct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0;
@@ -21,15 +22,17 @@ export function SavingsGoalCard({
       <div className="relative">
         <div className="mb-2.5 flex items-baseline justify-between text-[13.5px]">
           <span className="font-bold">{usd(saved).replace(".00", "")}</span>
-          <span className="opacity-80">of {usd(target).replace(".00", "")}</span>
+          {target > 0 && <span className="opacity-80">of {usd(target).replace(".00", "")}</span>}
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-white/30">
           <span className="block h-full rounded-full bg-white transition-all duration-500" style={{ width: `${goalPct}%` }} />
         </div>
-        <p className="mt-2 text-[12.5px] opacity-80">{goalPct}% funded · adjust the target in Settings</p>
+        <p className="mt-2 text-[12.5px] opacity-80">
+          {target > 0 ? `${goalPct}% funded · adjust the target in Settings` : "Set a savings target in Settings"}
+        </p>
       </div>
       <div className="relative">
-        <AddSavingsDialog onAdd={onAddSavings} />
+        <AddSavingsDialog onAdd={onAddSavings} available={available} />
       </div>
     </div>
   );

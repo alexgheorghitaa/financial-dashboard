@@ -11,6 +11,7 @@ const TINT = {
 function toUiTransaction(t: {
   id: string; amount: number; category: string; description: string;
   type: "income" | "expense"; date: Date;
+  repeat: "none" | "monthly"; endDate: Date | null;
 }): UiTransaction {
   const c = TINT[t.type];
   return {
@@ -26,10 +27,18 @@ function toUiTransaction(t: {
     amount: t.type === "income" ? t.amount : -t.amount,
     type: t.type,
     status: "Completed",
+    repeat: t.repeat,
+    endISO: t.endDate ? t.endDate.toISOString().slice(0, 10) : null,
   };
 }
-function toUiContribution(c: { id: string; amount: number; date: Date; repeat: "none" | "monthly" }): SavingsContributionUi {
-  return { id: c.id, amount: c.amount, dateISO: c.date.toISOString().slice(0, 10), repeat: c.repeat };
+function toUiContribution(c: { id: string; amount: number; date: Date; repeat: "none" | "monthly"; endDate: Date | null }): SavingsContributionUi {
+  return {
+    id: c.id,
+    amount: c.amount,
+    dateISO: c.date.toISOString().slice(0, 10),
+    repeat: c.repeat,
+    endISO: c.endDate ? c.endDate.toISOString().slice(0, 10) : null,
+  };
 }
 
 export async function getTransactionsForUser(userId: string) {
@@ -39,7 +48,7 @@ export async function getTransactionsForUser(userId: string) {
     include: {
       transactions: { orderBy: { date: "desc" } },
       savingsContributions: { orderBy: { date: "desc" } },
-      user: { select: { savingsGoal: true } },
+      user: { select: { savingsGoal: true, name: true, email: true } },
     },
   });
 
@@ -54,5 +63,7 @@ export async function getTransactionsForUser(userId: string) {
     transactions: account.transactions.map(toUiTransaction),
     savingsGoal: account.user.savingsGoal,
     contributions: account.savingsContributions.map(toUiContribution),
+    userName: account.user.name,
+    userEmail: account.user.email,
   };
 }

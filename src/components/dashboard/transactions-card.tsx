@@ -3,11 +3,17 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { AddTransactionDialog } from "@/components/dashboard/add-transaction-dialog";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
-import { usd, categories, type Transaction, type NewTransactionInput } from "@/lib/mock-data";
-import { Search, MoreHorizontal } from "lucide-react";
-import { monthKeyOf } from "@/lib/derive";
+import { usd, categories, type Transaction, type SavingsContributionUi, type NewTransactionInput } from "@/lib/mock-data";
+import { Search, MoreHorizontal, CircleSlash, Trash2 } from "lucide-react";
+import { occursInMonth } from "@/lib/derive";
 
 const statusClass: Record<string, string> = {
   Completed: "bg-[#EAF7EF] text-[#16A34A] dark:bg-[#16a34a]/15 dark:text-[#4ade80]",
@@ -22,6 +28,7 @@ const FILTERS = [
   { key: "all", label: "All" },
   { key: "income", label: "Income" },
   { key: "expense", label: "Expenses" },
+  { key: "savings", label: "Savings" },
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
@@ -37,14 +44,80 @@ const SORTS: { key: SortKey; label: string }[] = [
 const selectClass =
   "h-9 rounded-[10px] border border-db-line bg-db-card2 px-2.5 text-[13px] font-semibold text-db-text2 outline-none focus:border-db-accent";
 
+function fmtDate(iso: string) {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+}
+
+type Row = {
+  id: string;
+  kind: "transaction" | "savings";
+  name: string;
+  detail: string;
+  initial: string;
+  tint: string;
+  fg: string;
+  date: string;
+  dateISO: string;
+  category: string;
+  amount: number;
+  type: "income" | "expense" | null;
+  status: string;
+  repeat: "none" | "monthly";
+  endISO: string | null;
+};
+
+function txToRow(t: Transaction): Row {
+  return {
+    id: t.id,
+    kind: "transaction",
+    name: t.name,
+    detail: t.detail,
+    initial: t.initial,
+    tint: t.tint,
+    fg: t.fg,
+    date: t.date,
+    dateISO: t.dateISO,
+    category: t.category,
+    amount: t.amount,
+    type: t.type,
+    status: t.status,
+    repeat: t.repeat,
+    endISO: t.endISO,
+  };
+}
+
+function savingsToRow(c: SavingsContributionUi): Row {
+  return {
+    id: c.id,
+    kind: "savings",
+    name: "Savings deposit",
+    detail: "Savings",
+    initial: "S",
+    tint: "#eef2ff",
+    fg: "#6366f1",
+    date: fmtDate(c.dateISO),
+    dateISO: c.dateISO,
+    category: "Savings",
+    amount: -c.amount,
+    type: null,
+    status: "Completed",
+    repeat: c.repeat,
+    endISO: c.endISO,
+  };
+}
+
 export function TransactionsCard({
-  transactions, onAdd, withControls = false, nowKey = "", minMonth = "",
+  transactions, contributions, onAdd, withControls = false, nowKey = "", minMonth = "",
+  onStopRecurring, onDelete,
 }: {
   transactions: Transaction[];
+  contributions?: SavingsContributionUi[];
   onAdd: (ui: Transaction, raw: NewTransactionInput) => void;
   withControls?: boolean;
   nowKey?: string;
   minMonth?: string;
+  onStopRecurring?: (id: string, kind: "transaction" | "savings") => void;
+  onDelete?: (id: string, kind: "transaction" | "savings") => void;
 }) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
@@ -53,18 +126,24 @@ export function TransactionsCard({
   const [category, setCategory] = useState<string>("all");
 
   const rows = useMemo(() => {
-    let result = transactions.filter((t) => {
-      if (filter !== "all" && t.type !== filter) return false;
-      if (query && !`${t.name} ${t.category}`.toLowerCase().includes(query.toLowerCase())) return false;
+    const all: Row[] = [
+      ...transactions.map(txToRow),
+      ...(contributions ?? []).map(savingsToRow),
+    ];
+
+    let result = all.filter((r) => {
+      if (filter === "savings" && r.kind !== "savings") return false;
+      if ((filter === "income" || filter === "expense") && (r.kind !== "transaction" || r.type !== filter)) return false;
+      if (query && !`${r.name} ${r.category}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
 
     if (withControls && monthFilter !== "all") {
-      result = result.filter((t) => monthKeyOf(t.dateISO) === monthFilter);
+      result = result.filter((r) => occursInMonth(r, monthFilter));
     }
 
     if (withControls && category !== "all") {
-      result = result.filter((t) => t.category === category);
+      result = result.filter((r) => r.category === category);
     }
 
     if (withControls) {
@@ -77,7 +156,9 @@ export function TransactionsCard({
     }
 
     return result;
-  }, [transactions, filter, query, monthFilter, category, sort, withControls]);
+  }, [transactions, contributions, filter, query, monthFilter, category, sort, withControls]);
+
+  const showMenu = withControls && (onStopRecurring || onDelete);
 
   return (
     <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
@@ -139,12 +220,17 @@ export function TransactionsCard({
         </TableHeader>
         <TableBody>
           {rows.map((t) => (
-            <TableRow key={t.id} className="border-db-line hover:bg-db-card2/60">
+            <TableRow key={`${t.kind}-${t.id}`} className="border-db-line hover:bg-db-card2/60">
               <TableCell className="py-3.5">
                 <div className="flex items-center gap-3">
                   <span className="flex size-[38px] items-center justify-center rounded-[10px] text-sm font-bold" style={{ background: t.tint, color: t.fg }}>{t.initial}</span>
                   <div className="whitespace-nowrap">
-                    <b className="block text-sm font-semibold text-db-text">{t.name}</b>
+                    <b className="flex items-center gap-2 text-sm font-semibold text-db-text">
+                      {t.name}
+                      {t.repeat === "monthly" && (
+                        <span className="rounded-full bg-db-card2 px-2 py-0.5 text-[11px] font-semibold text-db-soft">Monthly</span>
+                      )}
+                    </b>
                     <span className="text-[12.5px] text-db-soft">{t.detail}</span>
                   </div>
                 </div>
@@ -157,7 +243,41 @@ export function TransactionsCard({
                   <i className={`size-1.5 rounded-full ${dotClass[t.status]}`} />{t.status}
                 </span>
               </TableCell>
-              <TableCell className="text-right"><button className="rounded-md p-1.5 text-db-soft hover:bg-db-card2 hover:text-db-text2"><MoreHorizontal className="size-[18px]" /></button></TableCell>
+              <TableCell className="text-right">
+                {showMenu ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="rounded-md p-1.5 text-db-soft outline-none hover:bg-db-card2 hover:text-db-text2 focus-visible:ring-2 focus-visible:ring-db-accent/40" aria-label="Row actions">
+                        <MoreHorizontal className="size-[18px]" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      sideOffset={6}
+                      className="w-48 rounded-xl border-db-line bg-db-card p-1.5 text-db-text shadow-[0_18px_50px_rgba(16,24,40,0.18)]"
+                    >
+                      {t.repeat === "monthly" && onStopRecurring && (
+                        <DropdownMenuItem
+                          onSelect={() => onStopRecurring(t.id, t.kind)}
+                          className="cursor-pointer rounded-lg px-2.5 py-2 text-[13.5px] text-db-text focus:bg-db-card2 focus:text-db-text"
+                        >
+                          <CircleSlash className="size-4 text-db-soft" /> Stop recurring
+                        </DropdownMenuItem>
+                      )}
+                      {onDelete && (
+                        <DropdownMenuItem
+                          onSelect={() => onDelete(t.id, t.kind)}
+                          className="cursor-pointer rounded-lg px-2.5 py-2 text-[13.5px] font-medium text-[#dc2626] focus:bg-[#fef2f2] focus:text-[#dc2626] dark:focus:bg-[#dc2626]/15"
+                        >
+                          <Trash2 className="size-4 text-[#dc2626]" /> Delete
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <button className="rounded-md p-1.5 text-db-soft hover:bg-db-card2 hover:text-db-text2"><MoreHorizontal className="size-[18px]" /></button>
+                )}
+              </TableCell>
             </TableRow>
           ))}
           {rows.length === 0 && (

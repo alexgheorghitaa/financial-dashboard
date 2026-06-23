@@ -21,17 +21,42 @@ export function monthLabel(monthKey: string): string {
   return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
+function monthsBetween(startKey: string, endKey: string): number {
+  const [sy, sm] = startKey.split("-").map(Number);
+  const [ey, em] = endKey.split("-").map(Number);
+  const diff = (ey * 12 + em) - (sy * 12 + sm) + 1;
+  return diff > 0 ? diff : 0;
+}
+
+type Recurring = { dateISO: string; repeat: "none" | "monthly"; endISO: string | null };
+
+export function occursInMonth(item: Recurring, monthKey: string): boolean {
+  const start = monthKeyOf(item.dateISO);
+  if (start > monthKey) return false;
+  if (item.repeat === "none") return start === monthKey;
+  const end = item.endISO ? monthKeyOf(item.endISO) : null;
+  if (end && monthKey > end) return false;
+  return true;
+}
+
+function occurrenceCountUntil(item: Recurring, monthKey: string): number {
+  const start = monthKeyOf(item.dateISO);
+  if (start > monthKey) return 0;
+  if (item.repeat === "none") return 1;
+  const end = item.endISO ? monthKeyOf(item.endISO) : null;
+  const last = end && end < monthKey ? end : monthKey;
+  return monthsBetween(start, last);
+}
+
 export function computeBalanceUntil(txs: Transaction[], monthKey: string): number {
-  return txs
-    .filter((t) => monthKeyOf(t.dateISO) <= monthKey)
-    .reduce((sum, t) => sum + t.amount, 0);
+  return txs.reduce((sum, t) => sum + t.amount * occurrenceCountUntil(t, monthKey), 0);
 }
 
 export function computeMonthly(
   txs: Transaction[],
   monthKey: string,
 ): { income: number; expenses: number; savings: number } {
-  const inMonth = txs.filter((t) => monthKeyOf(t.dateISO) === monthKey);
+  const inMonth = txs.filter((t) => occursInMonth(t, monthKey));
   const income = inMonth
     .filter((t) => t.type === "income")
     .reduce((s, t) => s + t.amount, 0);
@@ -42,7 +67,7 @@ export function computeMonthly(
 }
 
 export function computeChangePct(current: number, previous: number): number | null {
-  if (!previous) return null;
+  if (previous <= 0) return null;
   return ((current - previous) / previous) * 100;
 }
 
@@ -68,7 +93,7 @@ export function computeExpenseShares(txs: Transaction[]): { label: string; value
 export function computeAllExpenses(txs: Transaction[], monthKey: string): {
   daily: number; weekly: number; monthly: number; highlight: { label: string; amount: number };
 } {
-  const monthTx = txs.filter((t) => t.type === "expense" && monthKeyOf(t.dateISO) === monthKey);
+  const monthTx = txs.filter((t) => t.type === "expense" && occursInMonth(t, monthKey));
   const monthly = monthTx.reduce((s, t) => s + Math.abs(t.amount), 0);
   const days = daysInMonth(monthKey);
   const daily = monthly / days;
@@ -82,9 +107,10 @@ export function computeAllExpenses(txs: Transaction[], monthKey: string): {
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function computeMonthlySeries(txs: Transaction[], year: number): { month: string; income: number; expenses: number }[] {
+export function computeMonthlySeries(txs: Transaction[], year: number, nowKey: string): { month: string; income: number; expenses: number }[] {
   return MONTH_NAMES.map((name, i) => {
     const monthKey = `${year}-${String(i + 1).padStart(2, "0")}`;
+    if (monthKey > nowKey) return { month: name, income: 0, expenses: 0 };
     const m = computeMonthly(txs, monthKey);
     return { month: name, income: m.income, expenses: m.expenses };
   });
@@ -93,7 +119,7 @@ export function computeMonthlySeries(txs: Transaction[], year: number): { month:
 export function computeWeeklySeries(txs: Transaction[], monthKey: string): { week: string; expenses: number }[] {
   const buckets = [0, 0, 0, 0, 0];
   txs
-    .filter((t) => t.type === "expense" && monthKeyOf(t.dateISO) === monthKey)
+    .filter((t) => t.type === "expense" && occursInMonth(t, monthKey))
     .forEach((t) => {
       const day = Number(t.dateISO.slice(8, 10));
       const idx = Math.min(4, Math.floor((day - 1) / 7));
@@ -102,26 +128,14 @@ export function computeWeeklySeries(txs: Transaction[], monthKey: string): { wee
   return buckets.map((expenses, i) => ({ week: `W${i + 1}`, expenses }));
 }
 
-export function computeAverages(txs: Transaction[], year: number): { income: number; expenses: number } {
-  const withData = computeMonthlySeries(txs, year).filter((m) => m.income > 0 || m.expenses > 0);
+export function computeAverages(txs: Transaction[], year: number, nowKey: string): { income: number; expenses: number } {
+  const withData = computeMonthlySeries(txs, year, nowKey).filter((m) => m.income > 0 || m.expenses > 0);
   if (withData.length === 0) return { income: 0, expenses: 0 };
   const sumInc = withData.reduce((s, m) => s + m.income, 0);
   const sumExp = withData.reduce((s, m) => s + m.expenses, 0);
   return { income: sumInc / withData.length, expenses: sumExp / withData.length };
 }
 
-function monthsBetween(startKey: string, endKey: string): number {
-  const [sy, sm] = startKey.split("-").map(Number);
-  const [ey, em] = endKey.split("-").map(Number);
-  const diff = (ey * 12 + em) - (sy * 12 + sm) + 1;
-  return diff > 0 ? diff : 0;
-}
-
 export function computeSaved(contributions: SavingsContributionUi[], monthKey: string): number {
-  return contributions.reduce((sum, c) => {
-    const start = monthKeyOf(c.dateISO);
-    if (start > monthKey) return sum;
-    if (c.repeat === "monthly") return sum + c.amount * monthsBetween(start, monthKey);
-    return sum + c.amount;
-  }, 0);
+  return contributions.reduce((sum, c) => sum + c.amount * occurrenceCountUntil(c, monthKey), 0);
 }

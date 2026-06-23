@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
+import { usd } from "@/lib/mock-data";
 
 const schema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0."),
@@ -22,18 +23,24 @@ const fieldClass =
 
 export function AddSavingsDialog({
   onAdd,
+  available,
 }: {
   onAdd: (input: { amount: number; repeat: "none" | "monthly" }) => void;
+  available: number;
 }) {
   const [open, setOpen] = useState(false);
   const {
-    register, handleSubmit, reset, formState: { errors },
+    register, handleSubmit, reset, setError, formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { repeat: "none" },
   });
 
   function submit(values: FormValues) {
+    if (values.amount > available) {
+      setError("amount", { message: `You only have ${usd(available)} available.` });
+      return;
+    }
     onAdd({ amount: values.amount, repeat: values.repeat });
     reset();
     setOpen(false);
@@ -49,7 +56,7 @@ export function AddSavingsDialog({
       <DialogContent className="border-db-line bg-db-card text-db-text sm:max-w-[340px]">
         <DialogHeader>
           <DialogTitle className="text-db-text">Add to savings</DialogTitle>
-          <DialogDescription className="text-db-muted">Move money from your balance into the savings goal.</DialogDescription>
+          <DialogDescription className="text-db-muted">Move money into the savings goal · {usd(available)} available.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(submit)} className="space-y-4">

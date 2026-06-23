@@ -59,7 +59,7 @@ export function StatisticsChart({
             <XAxis dataKey="week" tickLine={false} axisLine={false} tick={tickStyle} dy={8} />
             <YAxis hide domain={[0, "auto"]} />
             <Tooltip content={<WeeklyTooltip />} cursor={{ fill: "var(--db-grid)" }} />
-            <Bar dataKey="expenses" radius={[7, 7, 0, 0]} maxBarSize={34}>
+            <Bar dataKey="expenses" radius={[7, 7, 0, 0]} maxBarSize={34} minPointSize={4}>
               {weeklyData.map((d, i) => (
                 <Cell key={i} fill={maxWeek > 0 && d.expenses === maxWeek ? "#16A34A" : "#F59E0B"} />
               ))}

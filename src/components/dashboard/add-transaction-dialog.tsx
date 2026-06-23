@@ -62,6 +62,8 @@ export function AddTransactionDialog({ onAdd }: { onAdd: (ui: Transaction, raw: 
       amount: signed,
       type: values.type,
       status: "Completed",
+      repeat: values.repeat,
+      endISO: null,
     };
 
     onAdd(ui, {
