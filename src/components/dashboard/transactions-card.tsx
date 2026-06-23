@@ -87,12 +87,13 @@ function txToRow(t: Transaction): Row {
 }
 
 function savingsToRow(c: SavingsContributionUi): Row {
+  const isWithdrawal = c.amount < 0;
   return {
     id: c.id,
     kind: "savings",
-    name: "Savings deposit",
+    name: isWithdrawal ? "Savings withdrawal" : "Savings deposit",
     detail: "Savings",
-    initial: "S",
+    initial: isWithdrawal ? "W" : "S",
     tint: "#eef2ff",
     fg: "#6366f1",
     date: fmtDate(c.dateISO),

@@ -92,6 +92,38 @@ export async function addSavingsContribution(input: {
   return { success: true };
 }
 
+const withdrawSchema = z.object({ amount: z.coerce.number().positive() });
+
+export async function withdrawSavings(input: { amount: number }): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const parsed = withdrawSchema.safeParse(input);
+  if (!parsed.success) return { error: "Invalid data." };
+
+  const account = await prisma.account.findFirst({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!account) return { error: "No account found." };
+
+  const data = await getTransactionsForUser(session.user.id);
+  const nowKey = monthKeyOf(new Date().toISOString());
+  const saved = data ? computeSaved(data.contributions, nowKey) : 0;
+  if (parsed.data.amount > saved) return { error: "You can't withdraw more than you've saved." };
+
+  await prisma.savingsContribution.create({
+    data: {
+      amount: -parsed.data.amount,
+      repeat: "none",
+      accountId: account.id,
+    },
+  });
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 async function requireAccount(userId: string) {
   return prisma.account.findFirst({
     where: { userId },

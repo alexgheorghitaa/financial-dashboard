@@ -9,39 +9,35 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Minus } from "lucide-react";
 import { usd } from "@/lib/mock-data";
 
 const schema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0."),
-  repeat: z.enum(["none", "monthly"]),
 });
 type FormValues = z.infer<typeof schema>;
 
 const fieldClass =
   "h-11 w-full rounded-lg border border-db-line bg-db-card2 px-3 text-sm text-db-text outline-none focus:border-db-accent";
 
-export function AddSavingsDialog({
-  onAdd,
-  available,
+export function WithdrawSavingsDialog({
+  onWithdraw,
+  saved,
 }: {
-  onAdd: (input: { amount: number; repeat: "none" | "monthly" }) => void;
-  available: number;
+  onWithdraw: (input: { amount: number }) => void;
+  saved: number;
 }) {
   const [open, setOpen] = useState(false);
   const {
     register, handleSubmit, reset, setError, formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { repeat: "none" },
-  });
+  } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   function submit(values: FormValues) {
-    if (values.amount > available) {
-      setError("amount", { message: `You only have ${usd(available)} available.` });
+    if (values.amount > saved) {
+      setError("amount", { message: `You only have ${usd(saved)} saved.` });
       return;
     }
-    onAdd({ amount: values.amount, repeat: values.repeat });
+    onWithdraw({ amount: values.amount });
     reset();
     setOpen(false);
   }
@@ -49,34 +45,29 @@ export function AddSavingsDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/15 py-2.5 text-[13.5px] font-semibold text-white backdrop-blur transition hover:bg-white/25">
-          <Plus className="size-[15px]" /> Add to savings
+        <button
+          disabled={saved <= 0}
+          className="flex items-center justify-center gap-1.5 rounded-xl border border-white/30 px-3 py-2.5 text-[13.5px] font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          <Minus className="size-[15px]" /> Withdraw
         </button>
       </DialogTrigger>
       <DialogContent className="border-db-line bg-db-card text-db-text sm:max-w-[340px]">
         <DialogHeader>
-          <DialogTitle className="text-db-text">Add to savings</DialogTitle>
-          <DialogDescription className="text-db-muted">Move money into the savings goal · {usd(available)} available.</DialogDescription>
+          <DialogTitle className="text-db-text">Withdraw from savings</DialogTitle>
+          <DialogDescription className="text-db-muted">Move money back into your balance · {usd(saved)} saved.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(submit)} className="space-y-4">
           <div>
-            <Label htmlFor="savings-amount" className="mb-1.5 block text-db-text2">Amount (USD)</Label>
-            <input id="savings-amount" type="number" step="0.01" placeholder="0.00" className={fieldClass} {...register("amount")} />
+            <Label htmlFor="withdraw-amount" className="mb-1.5 block text-db-text2">Amount (USD)</Label>
+            <input id="withdraw-amount" type="number" step="0.01" placeholder="0.00" className={fieldClass} {...register("amount")} />
             {errors.amount && <p className="mt-1 text-xs text-destructive">{errors.amount.message}</p>}
-          </div>
-
-          <div>
-            <Label htmlFor="savings-repeat" className="mb-1.5 block text-db-text2">Frequency</Label>
-            <select id="savings-repeat" className={fieldClass} {...register("repeat")}>
-              <option value="none">One-time</option>
-              <option value="monthly">Every month</option>
-            </select>
           </div>
 
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-db-line text-db-text2">Cancel</Button>
-            <Button type="submit" className="bg-db-accent text-white hover:opacity-90">Add</Button>
+            <Button type="submit" className="bg-db-accent text-white hover:opacity-90">Withdraw</Button>
           </DialogFooter>
         </form>
       </DialogContent>

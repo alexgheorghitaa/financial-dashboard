@@ -13,6 +13,7 @@ import { type Transaction } from "@/lib/mock-data";
 import {
   createTransaction,
   addSavingsContribution,
+  withdrawSavings,
   stopRecurringTransaction,
   deleteTransaction,
   stopRecurringSavings,
@@ -51,6 +52,12 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
   function handleAddSavings(input: { amount: number; repeat: "none" | "monthly" }) {
     startTransition(async () => {
       await addSavingsContribution(input);
+    });
+  }
+
+  function handleWithdraw(input: { amount: number }) {
+    startTransition(async () => {
+      await withdrawSavings(input);
     });
   }
 
@@ -168,7 +175,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
                 <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
                   <AllExpenses shares={shares} expenses={expenses} periodLabel={monthLabel(selectedMonth)} />
                 </Card>
-                <SavingsGoalCard saved={savedNow} target={target} available={availableNow} onAddSavings={handleAddSavings} />
+                <SavingsGoalCard saved={savedNow} target={target} available={availableNow} onAddSavings={handleAddSavings} onWithdraw={handleWithdraw} />
               </div>
             </div>
             <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} />

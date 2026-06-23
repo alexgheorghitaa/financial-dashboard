@@ -2,16 +2,19 @@
 
 import { usd } from "@/lib/mock-data";
 import { AddSavingsDialog } from "@/components/dashboard/add-savings-dialog";
+import { WithdrawSavingsDialog } from "@/components/dashboard/withdraw-savings-dialog";
 
 export function SavingsGoalCard({
-  saved, target, available, onAddSavings,
+  saved, target, available, onAddSavings, onWithdraw,
 }: {
   saved: number;
   target: number;
   available: number;
   onAddSavings: (input: { amount: number; repeat: "none" | "monthly" }) => void;
+  onWithdraw: (input: { amount: number }) => void;
 }) {
   const goalPct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0;
+  const reached = target > 0 && saved >= target;
   return (
     <div className="relative flex flex-col justify-between gap-[18px] overflow-hidden rounded-2xl p-5 text-white" style={{ background: "linear-gradient(135deg,#1f9e4a 0%,#127a39 48%,#0a5a2a 100%)" }}>
       <div className="pointer-events-none absolute -bottom-16 -right-10 size-[220px] rounded-full" style={{ background: "radial-gradient(circle,rgba(255,255,255,.18),transparent 70%)" }} />
@@ -28,11 +31,16 @@ export function SavingsGoalCard({
           <span className="block h-full rounded-full bg-white transition-all duration-500" style={{ width: `${goalPct}%` }} />
         </div>
         <p className="mt-2 text-[12.5px] opacity-80">
-          {target > 0 ? `${goalPct}% funded · adjust the target in Settings` : "Set a savings target in Settings"}
+          {target > 0
+            ? reached
+              ? "🎉 Goal reached · raise your target in Settings"
+              : `${goalPct}% funded · adjust the target in Settings`
+            : "Set a savings target in Settings"}
         </p>
       </div>
-      <div className="relative">
+      <div className="relative flex gap-2">
         <AddSavingsDialog onAdd={onAddSavings} available={available} />
+        <WithdrawSavingsDialog onWithdraw={onWithdraw} saved={saved} />
       </div>
     </div>
   );
