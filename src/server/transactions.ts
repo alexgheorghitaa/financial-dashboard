@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Transaction as UiTransaction } from "@/lib/mock-data";
+import type { Transaction as UiTransaction, SavingsContributionUi } from "@/lib/mock-data";
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
@@ -28,11 +28,19 @@ function toUiTransaction(t: {
     status: "Completed",
   };
 }
+function toUiContribution(c: { id: string; amount: number; date: Date; repeat: "none" | "monthly" }): SavingsContributionUi {
+  return { id: c.id, amount: c.amount, dateISO: c.date.toISOString().slice(0, 10), repeat: c.repeat };
+}
+
 export async function getTransactionsForUser(userId: string) {
   const account = await prisma.account.findFirst({
     where: { userId },
     orderBy: { createdAt: "asc" },
-    include: { transactions: { orderBy: { date: "desc" } } },
+    include: {
+      transactions: { orderBy: { date: "desc" } },
+      savingsContributions: { orderBy: { date: "desc" } },
+      user: { select: { savingsGoal: true } },
+    },
   });
 
   if (!account) return null;
@@ -44,5 +52,7 @@ export async function getTransactionsForUser(userId: string) {
       createdAt: account.createdAt.toISOString(),
     },
     transactions: account.transactions.map(toUiTransaction),
+    savingsGoal: account.user.savingsGoal,
+    contributions: account.savingsContributions.map(toUiContribution),
   };
 }

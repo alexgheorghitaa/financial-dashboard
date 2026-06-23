@@ -9,17 +9,24 @@ import { AllExpenses } from "@/components/dashboard/all-expenses";
 import { SavingsGoalCard } from "@/components/dashboard/savings-goal-card";
 import { TransactionsCard } from "@/components/dashboard/transactions-card";
 import { SettingsPanel } from "@/components/dashboard/settings-panel";
-import { savingsGoal, type Transaction } from "@/lib/mock-data";
-import { createTransaction } from "@/app/dashboard/actions";
+import { type Transaction } from "@/lib/mock-data";
+import { createTransaction, addSavingsContribution } from "@/app/dashboard/actions";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
-import { monthKeyOf, shiftMonth, computeMonthly, computeMonthlySeries, computeWeeklySeries, computeAverages, computeBalanceUntil, daysInMonth, computeChangePct, computeAllExpenses, computeExpenseShares, monthLabel } from "@/lib/derive";
+import { monthKeyOf, shiftMonth, computeMonthly, computeMonthlySeries, computeWeeklySeries, computeSaved, computeAverages, computeBalanceUntil, daysInMonth, computeChangePct, computeAllExpenses, computeExpenseShares, monthLabel } from "@/lib/derive";
 
 const TABS = ["Overview", "Analytics", "Transactions", "Settings"] as const;
 type Tab = (typeof TABS)[number];
 
 type DashUser = { name?: string | null; email?: string | null; image?: string | null };
 
-export function DashboardClient({ user, transactions, now, accountCreatedAt }: { user: DashUser; transactions: Transaction[]; now: string; accountCreatedAt: string }) {
+export function DashboardClient({ user, transactions, now, accountCreatedAt, contributions = [], savingsGoal = 0 }: {
+  user: DashUser;
+  transactions: Transaction[];
+  now: string;
+  accountCreatedAt: string;
+  contributions?: { id: string; amount: number; dateISO: string; repeat: "none" | "monthly" }[];
+  savingsGoal?: number;
+}) {
   const [tab, setTab] = useState<Tab>("Overview");
   const [optimisticTx, addOptimistic] = useOptimistic(
     transactions,
@@ -31,7 +38,13 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt }: {
       await createTransaction(raw);
     });
   }
-  const [target, setTarget] = useState(savingsGoal.target);
+
+  function handleAddSavings(input: { amount: number; repeat: "none" | "monthly" }) {
+    startTransition(async () => {
+      await addSavingsContribution(input);
+    });
+  }
+  const [target, setTarget] = useState(savingsGoal);
 
   const nowKey = monthKeyOf(now);
   const [selectedMonth, setSelectedMonth] = useState(() => nowKey);
@@ -47,12 +60,17 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt }: {
   const balance = computeBalanceUntil(optimisticTx, selectedMonth);
   const prevClosing = computeBalanceUntil(optimisticTx, shiftMonth(selectedMonth, -1));
 
+  const saved = computeSaved(contributions, selectedMonth);
+  const savedNow = computeSaved(contributions, nowKey);
+  const available = balance - saved;
+
   const stats = {
-    balance,
+    balance: available,
     balanceChange: computeChangePct(balance, prevClosing),
     dailySpend: selMonth.expenses / daysInMonth(selectedMonth),
     savings: selMonth.savings,
     savingsChange: computeChangePct(selMonth.savings, prevOfSel.savings),
+    saved: savedNow,
   };
 
   const monthTx = optimisticTx.filter((t) => monthKeyOf(t.dateISO) === selectedMonth);
@@ -114,7 +132,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt }: {
                 <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
                   <AllExpenses shares={shares} expenses={expenses} periodLabel={monthLabel(selectedMonth)} />
                 </Card>
-                <SavingsGoalCard saved={savingsGoal.saved} target={target} />
+                <SavingsGoalCard saved={savedNow} target={target} onAddSavings={handleAddSavings} />
               </div>
             </div>
             <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} />
@@ -144,7 +162,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt }: {
         )}
 
         {tab === "Settings" && (
-          <SettingsPanel saved={savingsGoal.saved} target={target} onTargetChange={setTarget} />
+          <SettingsPanel saved={savedNow} target={target} onTargetChange={setTarget} />
         )}
       </main>
     </div>

@@ -1,4 +1,4 @@
-import type { Transaction } from "@/lib/mock-data";
+import type { Transaction, SavingsContributionUi } from "@/lib/mock-data";
 
 export function monthKeyOf(iso: string): string {
   return iso.slice(0, 7);
@@ -108,4 +108,20 @@ export function computeAverages(txs: Transaction[], year: number): { income: num
   const sumInc = withData.reduce((s, m) => s + m.income, 0);
   const sumExp = withData.reduce((s, m) => s + m.expenses, 0);
   return { income: sumInc / withData.length, expenses: sumExp / withData.length };
+}
+
+function monthsBetween(startKey: string, endKey: string): number {
+  const [sy, sm] = startKey.split("-").map(Number);
+  const [ey, em] = endKey.split("-").map(Number);
+  const diff = (ey * 12 + em) - (sy * 12 + sm) + 1;
+  return diff > 0 ? diff : 0;
+}
+
+export function computeSaved(contributions: SavingsContributionUi[], monthKey: string): number {
+  return contributions.reduce((sum, c) => {
+    const start = monthKeyOf(c.dateISO);
+    if (start > monthKey) return sum;
+    if (c.repeat === "monthly") return sum + c.amount * monthsBetween(start, monthKey);
+    return sum + c.amount;
+  }, 0);
 }

@@ -49,3 +49,36 @@ export async function createTransaction(input: {
   revalidatePath("/dashboard");
   return { success: true };
 }
+
+const savingsSchema = z.object({
+  amount: z.coerce.number().positive(),
+  repeat: z.enum(["none", "monthly"]),
+});
+
+export async function addSavingsContribution(input: {
+  amount: number;
+  repeat: "none" | "monthly";
+}): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const parsed = savingsSchema.safeParse(input);
+  if (!parsed.success) return { error: "Invalid data." };
+
+  const account = await prisma.account.findFirst({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!account) return { error: "No account found." };
+
+  await prisma.savingsContribution.create({
+    data: {
+      amount: parsed.data.amount,
+      repeat: parsed.data.repeat,
+      accountId: account.id,
+    },
+  });
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}

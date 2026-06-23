@@ -65,6 +65,13 @@ export type Transaction = {
   status: TxStatus;
 };
 
+export type SavingsContributionUi = {
+  id: string;
+  amount: number;
+  dateISO: string;
+  repeat: "none" | "monthly";
+};
+
 export const categories = [
   "Income",
   "Groceries",

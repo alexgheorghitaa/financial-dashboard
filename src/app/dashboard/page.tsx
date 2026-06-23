@@ -10,5 +10,16 @@ export default async function DashboardPage() {
   const transactions = data?.transactions ?? [];
   const now = new Date().toISOString();
   const accountCreatedAt = data?.account.createdAt ?? now;
-  return <DashboardClient user={session.user} transactions={transactions} now={now} accountCreatedAt={accountCreatedAt} />;
+  const contributions = data?.contributions ?? [];
+  const savingsGoal = data?.savingsGoal ?? 0;
+  return (
+    <DashboardClient
+      user={session.user}
+      transactions={transactions}
+      now={now}
+      accountCreatedAt={accountCreatedAt}
+      contributions={contributions}
+      savingsGoal={savingsGoal}
+    />
+  );
 }
