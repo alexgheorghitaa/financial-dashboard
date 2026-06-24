@@ -178,7 +178,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
                 <SavingsGoalCard saved={savedNow} target={target} available={availableNow} onAddSavings={handleAddSavings} onWithdraw={handleWithdraw} />
               </div>
             </div>
-            <TransactionsCard transactions={optimisticTx} onAdd={handleAdd} />
+            <TransactionsCard transactions={optimisticTx} contributions={contributions} onAdd={handleAdd} onStopRecurring={handleStopRecurring} onDelete={handleDelete} />
           </div>
         )}
 

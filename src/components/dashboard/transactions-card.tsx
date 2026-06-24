@@ -29,6 +29,7 @@ const FILTERS = [
   { key: "income", label: "Income" },
   { key: "expense", label: "Expenses" },
   { key: "savings", label: "Savings" },
+  { key: "recurring", label: "Recurring" },
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
@@ -134,6 +135,7 @@ export function TransactionsCard({
 
     let result = all.filter((r) => {
       if (filter === "savings" && r.kind !== "savings") return false;
+      if (filter === "recurring" && r.repeat !== "monthly") return false;
       if ((filter === "income" || filter === "expense") && (r.kind !== "transaction" || r.type !== filter)) return false;
       if (query && !`${r.name} ${r.category}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
@@ -159,7 +161,7 @@ export function TransactionsCard({
     return result;
   }, [transactions, contributions, filter, query, monthFilter, category, sort, withControls]);
 
-  const showMenu = withControls && (onStopRecurring || onDelete);
+  const showMenu = !!(onStopRecurring || onDelete);
 
   return (
     <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
@@ -229,7 +231,7 @@ export function TransactionsCard({
                     <b className="flex items-center gap-2 text-sm font-semibold text-db-text">
                       {t.name}
                       {t.repeat === "monthly" && (
-                        <span className="rounded-full bg-db-card2 px-2 py-0.5 text-[11px] font-semibold text-db-soft">Monthly</span>
+                        <span className="rounded-full bg-db-card2 px-2 py-0.5 text-[11px] font-semibold text-db-soft">{t.endISO ? "Stopped" : "Monthly"}</span>
                       )}
                     </b>
                     <span className="text-[12.5px] text-db-soft">{t.detail}</span>
@@ -245,7 +247,7 @@ export function TransactionsCard({
                 </span>
               </TableCell>
               <TableCell className="text-right">
-                {showMenu ? (
+                {showMenu && ((t.repeat === "monthly" && !t.endISO && onStopRecurring) || (t.kind === "transaction" && onDelete)) ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="rounded-md p-1.5 text-db-soft outline-none hover:bg-db-card2 hover:text-db-text2 focus-visible:ring-2 focus-visible:ring-db-accent/40" aria-label="Row actions">
@@ -257,7 +259,7 @@ export function TransactionsCard({
                       sideOffset={6}
                       className="w-48 rounded-xl border-db-line bg-db-card p-1.5 text-db-text shadow-[0_18px_50px_rgba(16,24,40,0.18)]"
                     >
-                      {t.repeat === "monthly" && onStopRecurring && (
+                      {t.repeat === "monthly" && !t.endISO && onStopRecurring && (
                         <DropdownMenuItem
                           onSelect={() => onStopRecurring(t.id, t.kind)}
                           className="cursor-pointer rounded-lg px-2.5 py-2 text-[13.5px] text-db-text focus:bg-db-card2 focus:text-db-text"
@@ -265,7 +267,7 @@ export function TransactionsCard({
                           <CircleSlash className="size-4 text-db-soft" /> Stop recurring
                         </DropdownMenuItem>
                       )}
-                      {onDelete && (
+                      {t.kind === "transaction" && onDelete && (
                         <DropdownMenuItem
                           onSelect={() => onDelete(t.id, t.kind)}
                           className="cursor-pointer rounded-lg px-2.5 py-2 text-[13.5px] font-medium text-[#dc2626] focus:bg-[#fef2f2] focus:text-[#dc2626] dark:focus:bg-[#dc2626]/15"

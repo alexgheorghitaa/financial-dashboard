@@ -36,7 +36,7 @@ export function StatCards({ stats, onAddTransaction }: { stats: Stats; onAddTran
           <p className="text-sm font-medium text-db-muted">{stats.saved > 0 ? "Available Balance" : "Total Balance"}</p>
           <span className="flex size-9 items-center justify-center rounded-full bg-db-accentweak text-db-accent"><Wallet className="size-[18px]" /></span>
         </div>
-        <Money value={stats.balance} className="mt-3 block text-[28px] font-bold tracking-tight text-db-text" />
+        <Money value={stats.balance} className={`mt-3 block text-[28px] font-bold tracking-tight ${stats.balance < 0 ? "text-[#e11d48]" : "text-db-text"}`} />
         <div className="mt-1.5 flex items-center gap-2 text-[13px]">
           <ChangeBadge value={stats.balanceChange} />
           <span className="text-db-soft">{stats.saved > 0 ? `${usd(stats.saved)} in savings` : "compare to last month"}</span>

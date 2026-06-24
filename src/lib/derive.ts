@@ -137,5 +137,6 @@ export function computeAverages(txs: Transaction[], year: number, nowKey: string
 }
 
 export function computeSaved(contributions: SavingsContributionUi[], monthKey: string): number {
-  return contributions.reduce((sum, c) => sum + c.amount * occurrenceCountUntil(c, monthKey), 0);
+  const total = contributions.reduce((sum, c) => sum + c.amount * occurrenceCountUntil(c, monthKey), 0);
+  return Math.max(0, total);
 }
