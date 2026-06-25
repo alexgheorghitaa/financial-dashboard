@@ -5,6 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 import { useTheme } from "next-themes";
 import { usd } from "@/lib/mock-data";
 
@@ -17,6 +20,7 @@ function initials(name: string) {
 
 export function SettingsPanel({
   saved, target, onTargetChange, name, email, onNameChange,
+  accountName, canDeleteAccount, onRenameAccount, onDeleteAccount,
 }: {
   saved: number;
   target: number;
@@ -24,12 +28,28 @@ export function SettingsPanel({
   name: string;
   email: string;
   onNameChange: (name: string) => void;
+  accountName: string;
+  canDeleteAccount: boolean;
+  onRenameAccount: (name: string) => void;
+  onDeleteAccount: () => void;
 }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [draft, setDraft] = useState(String(target));
   const [justSaved, setJustSaved] = useState(false);
   const [nameDraft, setNameDraft] = useState(name);
   const [nameSaved, setNameSaved] = useState(false);
+  const [accountDraft, setAccountDraft] = useState(accountName);
+  const [accountSaved, setAccountSaved] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  function saveAccountName() {
+    const next = accountDraft.trim();
+    if (next.length >= 1) {
+      onRenameAccount(next);
+      setAccountSaved(true);
+      setTimeout(() => setAccountSaved(false), 1600);
+    }
+  }
 
   function save() {
     const n = Number(draft);
@@ -115,6 +135,46 @@ export function SettingsPanel({
           {justSaved && <span className="text-sm font-semibold text-db-accent">Saved ✓</span>}
         </div>
       </Card>
+
+      <Card className="rounded-2xl border-db-line bg-db-card p-6" style={{ boxShadow: "var(--db-shadow)" }}>
+        <h3 className="text-[17px] font-bold tracking-tight text-db-text">Account</h3>
+        <p className="mt-1 text-[13.5px] text-db-muted">Rename or remove the current account.</p>
+
+        <div className="mt-5">
+          <Label htmlFor="account-name-settings" className="mb-1.5 block text-db-text2">Account name</Label>
+          <input id="account-name-settings" value={accountDraft} onChange={(e) => setAccountDraft(e.target.value)} className={fieldClass} />
+          <div className="mt-3 flex items-center gap-3">
+            <Button onClick={saveAccountName} className="bg-db-accent text-white hover:opacity-90">Save name</Button>
+            {accountSaved && <span className="text-sm font-semibold text-db-accent">Saved ✓</span>}
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-db-line pt-5">
+          {canDeleteAccount ? (
+            <>
+              <Button onClick={() => setConfirmOpen(true)} className="bg-[#dc2626] text-white hover:bg-[#b91c1c]">Delete account</Button>
+              <p className="mt-2 text-[12.5px] text-db-soft">Permanently removes this account and all its transactions &amp; savings.</p>
+            </>
+          ) : (
+            <p className="text-[12.5px] text-db-soft">This is your primary account — it can&apos;t be deleted (you can only rename it).</p>
+          )}
+        </div>
+      </Card>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="border-db-line bg-db-card text-db-text sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle className="text-db-text">Delete account?</DialogTitle>
+            <DialogDescription className="text-db-muted">
+              This permanently removes “{accountName}” and all its transactions &amp; savings. This can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)} className="border-db-line text-db-text2">Cancel</Button>
+            <Button type="button" onClick={() => { onDeleteAccount(); setConfirmOpen(false); }} className="bg-[#dc2626] text-white hover:bg-[#b91c1c]">Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

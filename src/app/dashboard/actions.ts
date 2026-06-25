@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { getTransactionsForUser } from "@/server/transactions";
+import { getTransactionsForUser, getActiveAccountId } from "@/server/transactions";
 import { monthKeyOf, computeBalanceUntil, computeSaved } from "@/lib/derive";
 
 const schema = z.object({
@@ -30,11 +30,8 @@ export async function createTransaction(input: {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { error: "Invalid data." };
 
-  const account = await prisma.account.findFirst({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "asc" },
-  });
-  if (!account) return { error: "No account found." };
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
 
   await prisma.transaction.create({
     data: {
@@ -44,7 +41,7 @@ export async function createTransaction(input: {
       type: parsed.data.type,
       repeat: parsed.data.repeat,
       date: new Date(parsed.data.date),
-      accountId: account.id,
+      accountId,
     },
   });
 
@@ -67,11 +64,8 @@ export async function addSavingsContribution(input: {
   const parsed = savingsSchema.safeParse(input);
   if (!parsed.success) return { error: "Invalid data." };
 
-  const account = await prisma.account.findFirst({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "asc" },
-  });
-  if (!account) return { error: "No account found." };
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
 
   const data = await getTransactionsForUser(session.user.id);
   const nowKey = monthKeyOf(new Date().toISOString());
@@ -84,7 +78,7 @@ export async function addSavingsContribution(input: {
     data: {
       amount: parsed.data.amount,
       repeat: parsed.data.repeat,
-      accountId: account.id,
+      accountId,
     },
   });
 
@@ -101,11 +95,8 @@ export async function withdrawSavings(input: { amount: number }): Promise<{ succ
   const parsed = withdrawSchema.safeParse(input);
   if (!parsed.success) return { error: "Invalid data." };
 
-  const account = await prisma.account.findFirst({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "asc" },
-  });
-  if (!account) return { error: "No account found." };
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
 
   const data = await getTransactionsForUser(session.user.id);
   const nowKey = monthKeyOf(new Date().toISOString());
@@ -116,7 +107,7 @@ export async function withdrawSavings(input: { amount: number }): Promise<{ succ
     data: {
       amount: -parsed.data.amount,
       repeat: "none",
-      accountId: account.id,
+      accountId,
     },
   });
 
@@ -124,22 +115,15 @@ export async function withdrawSavings(input: { amount: number }): Promise<{ succ
   return { success: true };
 }
 
-async function requireAccount(userId: string) {
-  return prisma.account.findFirst({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
-  });
-}
-
 export async function stopRecurringTransaction(id: string): Promise<{ success?: boolean; error?: string }> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not authenticated." };
 
-  const account = await requireAccount(session.user.id);
-  if (!account) return { error: "No account found." };
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
 
   const row = await prisma.transaction.findUnique({ where: { id } });
-  if (!row || row.accountId !== account.id) return { error: "Not found." };
+  if (!row || row.accountId !== accountId) return { error: "Not found." };
 
   await prisma.transaction.update({ where: { id }, data: { endDate: new Date() } });
 
@@ -151,11 +135,11 @@ export async function deleteTransaction(id: string): Promise<{ success?: boolean
   const session = await auth();
   if (!session?.user?.id) return { error: "Not authenticated." };
 
-  const account = await requireAccount(session.user.id);
-  if (!account) return { error: "No account found." };
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
 
   const row = await prisma.transaction.findUnique({ where: { id } });
-  if (!row || row.accountId !== account.id) return { error: "Not found." };
+  if (!row || row.accountId !== accountId) return { error: "Not found." };
 
   await prisma.transaction.delete({ where: { id } });
 
@@ -167,11 +151,11 @@ export async function stopRecurringSavings(id: string): Promise<{ success?: bool
   const session = await auth();
   if (!session?.user?.id) return { error: "Not authenticated." };
 
-  const account = await requireAccount(session.user.id);
-  if (!account) return { error: "No account found." };
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
 
   const row = await prisma.savingsContribution.findUnique({ where: { id } });
-  if (!row || row.accountId !== account.id) return { error: "Not found." };
+  if (!row || row.accountId !== accountId) return { error: "Not found." };
 
   await prisma.savingsContribution.update({ where: { id }, data: { endDate: new Date() } });
 
@@ -183,11 +167,11 @@ export async function deleteSavings(id: string): Promise<{ success?: boolean; er
   const session = await auth();
   if (!session?.user?.id) return { error: "Not authenticated." };
 
-  const account = await requireAccount(session.user.id);
-  if (!account) return { error: "No account found." };
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
 
   const row = await prisma.savingsContribution.findUnique({ where: { id } });
-  if (!row || row.accountId !== account.id) return { error: "Not found." };
+  if (!row || row.accountId !== accountId) return { error: "Not found." };
 
   await prisma.savingsContribution.delete({ where: { id } });
 
@@ -204,8 +188,11 @@ export async function updateSavingsGoal(target: number): Promise<{ success?: boo
   const parsed = targetSchema.safeParse({ target });
   if (!parsed.success) return { error: "Invalid data." };
 
-  await prisma.user.update({
-    where: { id: session.user.id },
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
+
+  await prisma.account.update({
+    where: { id: accountId },
     data: { savingsGoal: parsed.data.target },
   });
 
@@ -226,6 +213,77 @@ export async function updateUserName(name: string): Promise<{ success?: boolean;
     where: { id: session.user.id },
     data: { name: parsed.data.name },
   });
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+const accountNameSchema = z.object({ name: z.string().trim().min(1).max(40) });
+
+export async function setActiveAccount(accountId: string): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const account = await prisma.account.findUnique({ where: { id: accountId }, select: { userId: true } });
+  if (!account || account.userId !== session.user.id) return { error: "Not found." };
+
+  await prisma.user.update({ where: { id: session.user.id }, data: { activeAccountId: accountId } });
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function createAccount(name: string): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const parsed = accountNameSchema.safeParse({ name });
+  if (!parsed.success) return { error: "Invalid name." };
+
+  const account = await prisma.account.create({
+    data: { name: parsed.data.name, userId: session.user.id },
+  });
+  await prisma.user.update({ where: { id: session.user.id }, data: { activeAccountId: account.id } });
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function renameAccount(accountId: string, name: string): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const parsed = accountNameSchema.safeParse({ name });
+  if (!parsed.success) return { error: "Invalid name." };
+
+  const account = await prisma.account.findUnique({ where: { id: accountId }, select: { userId: true } });
+  if (!account || account.userId !== session.user.id) return { error: "Not found." };
+
+  await prisma.account.update({ where: { id: accountId }, data: { name: parsed.data.name } });
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function deleteAccount(accountId: string): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const accounts = await prisma.account.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (accounts.length <= 1) return { error: "You can't delete your only account." };
+  if (accounts[0].id === accountId) return { error: "You can't delete your primary account." };
+  if (!accounts.some((a) => a.id === accountId)) return { error: "Not found." };
+
+  await prisma.account.delete({ where: { id: accountId } });
+
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { activeAccountId: true } });
+  if (user?.activeAccountId === accountId) {
+    await prisma.user.update({ where: { id: session.user.id }, data: { activeAccountId: accounts[0].id } });
+  }
 
   revalidatePath("/dashboard");
   return { success: true };

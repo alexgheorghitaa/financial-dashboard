@@ -41,29 +41,49 @@ function toUiContribution(c: { id: string; amount: number; date: Date; repeat: "
   };
 }
 
+export async function getActiveAccountId(userId: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      activeAccountId: true,
+      accounts: { orderBy: { createdAt: "asc" }, select: { id: true } },
+    },
+  });
+  if (!user || user.accounts.length === 0) return null;
+  return user.accounts.find((a) => a.id === user.activeAccountId)?.id ?? user.accounts[0].id;
+}
+
 export async function getTransactionsForUser(userId: string) {
-  const account = await prisma.account.findFirst({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      name: true,
+      email: true,
+      activeAccountId: true,
+      accounts: { orderBy: { createdAt: "asc" }, select: { id: true, name: true } },
+    },
+  });
+  if (!user || user.accounts.length === 0) return null;
+
+  const activeId = user.accounts.find((a) => a.id === user.activeAccountId)?.id ?? user.accounts[0].id;
+
+  const account = await prisma.account.findUnique({
+    where: { id: activeId },
     include: {
       transactions: { orderBy: { date: "desc" } },
       savingsContributions: { orderBy: { date: "desc" } },
-      user: { select: { savingsGoal: true, name: true, email: true } },
     },
   });
-
   if (!account) return null;
 
   return {
-    account: {
-      id: account.id,
-      name: account.name,
-      createdAt: account.createdAt.toISOString(),
-    },
+    account: { id: account.id, name: account.name, createdAt: account.createdAt.toISOString() },
     transactions: account.transactions.map(toUiTransaction),
-    savingsGoal: account.user.savingsGoal,
     contributions: account.savingsContributions.map(toUiContribution),
-    userName: account.user.name,
-    userEmail: account.user.email,
+    savingsGoal: account.savingsGoal,
+    accounts: user.accounts,
+    activeId,
+    userName: user.name,
+    userEmail: user.email,
   };
 }

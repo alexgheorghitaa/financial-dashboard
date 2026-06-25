@@ -12,6 +12,8 @@ export default async function DashboardPage() {
   const accountCreatedAt = data?.account.createdAt ?? now;
   const contributions = data?.contributions ?? [];
   const savingsGoal = data?.savingsGoal ?? 0;
+  const accounts = data?.accounts ?? [];
+  const activeId = data?.activeId ?? "";
   const user = {
     name: data?.userName ?? session.user.name,
     email: data?.userEmail ?? session.user.email,
@@ -25,6 +27,8 @@ export default async function DashboardPage() {
       accountCreatedAt={accountCreatedAt}
       contributions={contributions}
       savingsGoal={savingsGoal}
+      accounts={accounts}
+      activeId={activeId}
     />
   );
 }

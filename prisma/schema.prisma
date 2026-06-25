@@ -12,6 +12,7 @@ model User {
   name         String
   email        String        @unique
   password     String
+  activeAccountId String?
   savingsGoal  Float         @default(0)
   createdAt    DateTime      @default(now())
   accounts Account[]
@@ -33,6 +34,7 @@ model Account{
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   savingsContributions SavingsContribution[]
+  savingsGoal  Float         @default(0)
   createdAt    DateTime      @default(now())
 }
 

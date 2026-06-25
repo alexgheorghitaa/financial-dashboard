@@ -20,6 +20,10 @@ import {
   deleteSavings,
   updateSavingsGoal,
   updateUserName,
+  setActiveAccount,
+  createAccount,
+  renameAccount,
+  deleteAccount,
 } from "@/app/dashboard/actions";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
 import { monthKeyOf, shiftMonth, computeMonthly, computeMonthlySeries, computeWeeklySeries, computeSaved, computeAverages, computeBalanceUntil, daysInMonth, computeChangePct, computeAllExpenses, computeExpenseShares, monthLabel, occursInMonth } from "@/lib/derive";
@@ -29,13 +33,17 @@ type Tab = (typeof TABS)[number];
 
 type DashUser = { name?: string | null; email?: string | null; image?: string | null };
 
-export function DashboardClient({ user, transactions, now, accountCreatedAt, contributions = [], savingsGoal = 0 }: {
+type AccountRef = { id: string; name: string };
+
+export function DashboardClient({ user, transactions, now, accountCreatedAt, contributions = [], savingsGoal = 0, accounts = [], activeId = "" }: {
   user: DashUser;
   transactions: Transaction[];
   now: string;
   accountCreatedAt: string;
   contributions?: { id: string; amount: number; dateISO: string; repeat: "none" | "monthly"; endISO: string | null }[];
   savingsGoal?: number;
+  accounts?: AccountRef[];
+  activeId?: string;
 }) {
   const [tab, setTab] = useState<Tab>("Overview");
   const [optimisticTx, addOptimistic] = useOptimistic(
@@ -73,14 +81,28 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
     });
   }
 
-  const [target, setTarget] = useState(savingsGoal);
-
   function handleTargetChange(n: number) {
-    setTarget(n);
     startTransition(async () => {
       await updateSavingsGoal(n);
     });
   }
+
+  function handleSwitchAccount(id: string) {
+    startTransition(async () => { await setActiveAccount(id); });
+  }
+  function handleCreateAccount(name: string) {
+    startTransition(async () => { await createAccount(name); });
+  }
+  function handleRenameAccount(name: string) {
+    startTransition(async () => { await renameAccount(activeId, name); });
+  }
+  function handleDeleteAccount() {
+    startTransition(async () => { await deleteAccount(activeId); });
+  }
+
+  const activeAccount = accounts.find((a) => a.id === activeId);
+  const accountName = activeAccount?.name ?? "Account";
+  const isPrimaryAccount = accounts.length > 0 && accounts[0].id === activeId;
 
   function handleNameChange(name: string) {
     startTransition(async () => {
@@ -128,7 +150,16 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
 
   return (
     <div className="min-h-screen bg-db-bg text-db-text">
-      <Topbar user={user} />
+      <Topbar
+        user={user}
+        accounts={accounts}
+        activeId={activeId}
+        accountName={accountName}
+        onSwitchAccount={handleSwitchAccount}
+        onCreateAccount={handleCreateAccount}
+        tab={tab}
+        onHome={() => setTab("Overview")}
+      />
 
       <main className="mx-auto max-w-[1560px] px-6 pb-9 pt-[18px]">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-6">
@@ -175,7 +206,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
                 <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
                   <AllExpenses shares={shares} expenses={expenses} periodLabel={monthLabel(selectedMonth)} />
                 </Card>
-                <SavingsGoalCard saved={savedNow} target={target} available={availableNow} onAddSavings={handleAddSavings} onWithdraw={handleWithdraw} />
+                <SavingsGoalCard saved={savedNow} target={savingsGoal} available={availableNow} onAddSavings={handleAddSavings} onWithdraw={handleWithdraw} />
               </div>
             </div>
             <TransactionsCard transactions={optimisticTx} contributions={contributions} onAdd={handleAdd} onStopRecurring={handleStopRecurring} onDelete={handleDelete} />
@@ -215,12 +246,17 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
 
         {tab === "Settings" && (
           <SettingsPanel
+            key={activeId}
             saved={savedNow}
-            target={target}
+            target={savingsGoal}
             onTargetChange={handleTargetChange}
             name={user.name ?? ""}
             email={user.email ?? ""}
             onNameChange={handleNameChange}
+            accountName={accountName}
+            canDeleteAccount={!isPrimaryAccount}
+            onRenameAccount={handleRenameAccount}
+            onDeleteAccount={handleDeleteAccount}
           />
         )}
       </main>
