@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -30,6 +29,7 @@ export function Topbar({
   onCreateAccount,
   tab,
   onHome,
+  onOpenSettings,
   searchItems,
   notifications,
   unreadCount,
@@ -43,6 +43,7 @@ export function Topbar({
   onCreateAccount: (name: string) => void;
   tab: string;
   onHome: () => void;
+  onOpenSettings: () => void;
   searchItems: SearchItem[];
   notifications: NotificationUi[];
   unreadCount: number;
@@ -128,12 +129,10 @@ export function Topbar({
             <DropdownMenuSeparator className="bg-db-line" />
 
             <DropdownMenuItem
-              asChild
+              onSelect={onOpenSettings}
               className="cursor-pointer rounded-lg px-2.5 py-2 text-[13.5px] text-db-text focus:bg-db-card2 focus:text-db-text"
             >
-              <Link href="/dashboard">
-                <Settings className="size-4 text-db-soft" /> Settings
-              </Link>
+              <Settings className="size-4 text-db-soft" /> Settings
             </DropdownMenuItem>
 
             <DropdownMenuSeparator className="bg-db-line" />

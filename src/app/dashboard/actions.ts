@@ -146,6 +146,12 @@ export async function deleteTransaction(id: string): Promise<{ success?: boolean
 
   await prisma.transaction.delete({ where: { id } });
 
+  // The transaction is gone — drop any notifications that pointed to it so the bell
+  // never references a ghost. (No-op for non-recurring transactions.)
+  await prisma.notification.deleteMany({
+    where: { accountId, dedupeKey: { startsWith: `recurring:${id}:` } },
+  });
+
   revalidatePath("/dashboard");
   return { success: true };
 }
@@ -370,20 +376,40 @@ export async function syncNotifications(): Promise<{ created: number; error?: st
   const data = await getTransactionsForUser(session.user.id);
   if (!data) return { created: 0 };
 
+  const nowISO = new Date().toISOString();
   const candidates = buildNotificationCandidates({
     accountId,
     transactions: data.transactions,
     contributions: data.contributions,
     savingsGoal: data.savingsGoal,
     tipUpdatedAt: data.tipUpdatedAt,
-    nowISO: new Date().toISOString(),
+    nowISO,
   });
-  if (candidates.length === 0) return { created: 0 };
 
-  // Idempotent: dedupeKey @unique + skipDuplicates → each event lands exactly once.
-  const res = await prisma.notification.createMany({ data: candidates, skipDuplicates: true });
-  if (res.count > 0) revalidatePath("/dashboard");
-  return { created: res.count };
+  // Condition-based alerts (low-balance / overspend) self-clear: if the condition no
+  // longer holds for the current month (e.g. you deleted the expense that caused it),
+  // drop the stale alert. Event-based ones (recurring / tip-ready / goal-reached) stay.
+  const nowKey = monthKeyOf(nowISO);
+  const present = new Set(candidates.map((c) => c.dedupeKey));
+  const conditionKeys = [`low-balance:${accountId}:${nowKey}`, `overspend:${accountId}:${nowKey}`];
+  const staleKeys = conditionKeys.filter((k) => !present.has(k));
+
+  let changed = false;
+  if (staleKeys.length > 0) {
+    const del = await prisma.notification.deleteMany({ where: { accountId, dedupeKey: { in: staleKeys } } });
+    changed = del.count > 0;
+  }
+
+  let created = 0;
+  if (candidates.length > 0) {
+    // Idempotent: dedupeKey @unique + skipDuplicates → each event lands exactly once.
+    const res = await prisma.notification.createMany({ data: candidates, skipDuplicates: true });
+    created = res.count;
+    changed = changed || res.count > 0;
+  }
+
+  if (changed) revalidatePath("/dashboard");
+  return { created };
 }
 
 export async function markNotificationRead(id: string): Promise<{ success?: boolean; error?: string }> {

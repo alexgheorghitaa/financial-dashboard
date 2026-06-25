@@ -226,6 +226,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
         onCreateAccount={handleCreateAccount}
         tab={tab}
         onHome={() => setTab("Overview")}
+        onOpenSettings={() => setTab("Settings")}
         searchItems={searchItems}
         notifications={notifications}
         unreadCount={unreadCount}
