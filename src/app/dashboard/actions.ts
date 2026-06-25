@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { getTransactionsForUser, getActiveAccountId } from "@/server/transactions";
 import { generateDailyTip } from "@/server/groq";
 import { buildTipSnapshot } from "@/lib/tip-context";
+import { buildNotificationCandidates } from "@/server/notifications";
 import { monthKeyOf, computeBalanceUntil, computeSaved } from "@/lib/derive";
 
 const schema = z.object({
@@ -357,4 +358,62 @@ export async function generateTip(): Promise<{ tip?: string; error?: string }> {
 
   revalidatePath("/dashboard");
   return { tip: result.tip };
+}
+
+export async function syncNotifications(): Promise<{ created: number; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { created: 0, error: "Not authenticated." };
+
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { created: 0, error: "No account found." };
+
+  const data = await getTransactionsForUser(session.user.id);
+  if (!data) return { created: 0 };
+
+  const candidates = buildNotificationCandidates({
+    accountId,
+    transactions: data.transactions,
+    contributions: data.contributions,
+    savingsGoal: data.savingsGoal,
+    tipUpdatedAt: data.tipUpdatedAt,
+    nowISO: new Date().toISOString(),
+  });
+  if (candidates.length === 0) return { created: 0 };
+
+  // Idempotent: dedupeKey @unique + skipDuplicates → each event lands exactly once.
+  const res = await prisma.notification.createMany({ data: candidates, skipDuplicates: true });
+  if (res.count > 0) revalidatePath("/dashboard");
+  return { created: res.count };
+}
+
+export async function markNotificationRead(id: string): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
+
+  const row = await prisma.notification.findUnique({ where: { id }, select: { accountId: true } });
+  if (!row || row.accountId !== accountId) return { error: "Not found." };
+
+  await prisma.notification.update({ where: { id }, data: { readAt: new Date() } });
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function markAllNotificationsRead(): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
+
+  await prisma.notification.updateMany({
+    where: { accountId, readAt: null },
+    data: { readAt: new Date() },
+  });
+
+  revalidatePath("/dashboard");
+  return { success: true };
 }

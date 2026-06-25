@@ -14,6 +14,8 @@ export default async function DashboardPage() {
   const savingsGoal = data?.savingsGoal ?? 0;
   const accounts = data?.accounts ?? [];
   const activeId = data?.activeId ?? "";
+  const notifications = data?.notifications ?? [];
+  const unreadCount = data?.unreadCount ?? 0;
   const tip = data?.tip ?? null;
   const tipUpdatedAt = data?.tipUpdatedAt ?? null;
   const DAY_MS = 24 * 60 * 60 * 1000;
@@ -35,6 +37,8 @@ export default async function DashboardPage() {
       savingsGoal={savingsGoal}
       accounts={accounts}
       activeId={activeId}
+      notifications={notifications}
+      unreadCount={unreadCount}
       tip={tip}
       canRefreshTip={canRefreshTip}
       tipHoursLeft={tipHoursLeft}

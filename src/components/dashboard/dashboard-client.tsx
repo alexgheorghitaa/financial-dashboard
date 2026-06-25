@@ -28,6 +28,7 @@ import {
   deleteAccount,
 } from "@/app/dashboard/actions";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
+import type { NotificationUi } from "@/server/transactions";
 import { monthKeyOf, shiftMonth, computeMonthly, computeMonthlySeries, computeWeeklySeries, computeSaved, computeAverages, computeBalanceUntil, daysInMonth, computeChangePct, computeAllExpenses, computeExpenseShares, monthLabel, occursInMonth } from "@/lib/derive";
 
 const TABS = ["Overview", "Analytics", "Transactions", "Settings"] as const;
@@ -37,7 +38,7 @@ type DashUser = { name?: string | null; email?: string | null; image?: string | 
 
 type AccountRef = { id: string; name: string };
 
-export function DashboardClient({ user, transactions, now, accountCreatedAt, contributions = [], savingsGoal = 0, accounts = [], activeId = "", tip = null, canRefreshTip = true, tipHoursLeft = 0 }: {
+export function DashboardClient({ user, transactions, now, accountCreatedAt, contributions = [], savingsGoal = 0, accounts = [], activeId = "", tip = null, canRefreshTip = true, tipHoursLeft = 0, notifications = [], unreadCount = 0 }: {
   user: DashUser;
   transactions: Transaction[];
   now: string;
@@ -49,6 +50,8 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
   tip?: string | null;
   canRefreshTip?: boolean;
   tipHoursLeft?: number;
+  notifications?: NotificationUi[];
+  unreadCount?: number;
 }) {
   const [tab, setTab] = useState<Tab>("Overview");
   const [optimisticTx, addOptimistic] = useOptimistic(
@@ -124,6 +127,11 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
   function goToTransaction(id: string) {
     setTab("Transactions");
     setHighlightId(id);
+  }
+
+  function handleNotificationNavigate(n: NotificationUi) {
+    const toTransactions = n.type === "recurring" || n.type === "overspend" || n.type === "low-balance";
+    setTab(toTransactions ? "Transactions" : "Overview");
   }
 
   const nowKey = monthKeyOf(now);
@@ -219,6 +227,9 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
         tab={tab}
         onHome={() => setTab("Overview")}
         searchItems={searchItems}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onNotificationNavigate={handleNotificationNavigate}
       />
 
       <main className="mx-auto max-w-[1560px] px-6 pb-9 pt-[18px]">

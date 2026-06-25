@@ -13,8 +13,10 @@ import {
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { CreateAccountDialog } from "@/components/dashboard/create-account-dialog";
 import { SearchCommand, type SearchItem } from "@/components/dashboard/search-command";
+import { NotificationsMenu } from "@/components/dashboard/notifications-menu";
 import { signOut } from "next-auth/react";
-import { Bell, ChevronDown, ChevronsUpDown, ChevronRight, Settings, LogOut, Check, Plus } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, ChevronRight, Settings, LogOut, Check, Plus } from "lucide-react";
+import type { NotificationUi } from "@/server/transactions";
 
 type TopbarUser = { name?: string | null; email?: string | null; image?: string | null };
 type AccountRef = { id: string; name: string };
@@ -29,6 +31,9 @@ export function Topbar({
   tab,
   onHome,
   searchItems,
+  notifications,
+  unreadCount,
+  onNotificationNavigate,
 }: {
   user: TopbarUser;
   accounts: AccountRef[];
@@ -39,6 +44,9 @@ export function Topbar({
   tab: string;
   onHome: () => void;
   searchItems: SearchItem[];
+  notifications: NotificationUi[];
+  unreadCount: number;
+  onNotificationNavigate?: (n: NotificationUi) => void;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -90,7 +98,7 @@ export function Topbar({
 
       <div className="ml-auto flex items-center gap-3">
         <ThemeToggle />
-        <button className="relative flex size-[42px] items-center justify-center rounded-[10px] border border-db-line bg-db-card text-db-text2 hover:bg-db-card2"><Bell className="size-[19px]" /><span className="absolute right-2.5 top-2 size-2 rounded-full border-2 border-db-card bg-[#EF4444]" /></button>
+        <NotificationsMenu notifications={notifications} unreadCount={unreadCount} onNavigate={onNotificationNavigate} />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

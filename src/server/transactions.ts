@@ -1,5 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import type { Transaction as UiTransaction, SavingsContributionUi } from "@/lib/mock-data";
+import { relativeTime } from "@/server/notifications";
+
+export type NotificationUi = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  when: string;
+  unread: boolean;
+};
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
@@ -72,9 +82,21 @@ export async function getTransactionsForUser(userId: string) {
     include: {
       transactions: { orderBy: { date: "desc" } },
       savingsContributions: { orderBy: { date: "desc" } },
+      notifications: { orderBy: { createdAt: "desc" }, take: 20 },
     },
   });
   if (!account) return null;
+
+  const nowISO = new Date().toISOString();
+  const notifications: NotificationUi[] = account.notifications.map((n) => ({
+    id: n.id,
+    type: n.type,
+    title: n.title,
+    body: n.body,
+    when: relativeTime(n.createdAt.toISOString(), nowISO),
+    unread: n.readAt === null,
+  }));
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return {
     account: { id: account.id, name: account.name, createdAt: account.createdAt.toISOString() },
@@ -83,6 +105,8 @@ export async function getTransactionsForUser(userId: string) {
     savingsGoal: account.savingsGoal,
     tip: account.tipText,
     tipUpdatedAt: account.tipUpdatedAt ? account.tipUpdatedAt.toISOString() : null,
+    notifications,
+    unreadCount,
     accounts: user.accounts,
     activeId,
     userName: user.name,
