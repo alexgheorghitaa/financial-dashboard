@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useOptimistic, startTransition } from "react";
+import { useState, useEffect, useOptimistic, startTransition } from "react";
 import { Card } from "@/components/ui/card";
 import { Topbar } from "@/components/dashboard/topbar";
+import { type SearchItem } from "@/components/dashboard/search-command";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { StatisticsCard } from "@/components/dashboard/statistics-card";
 import { AllExpenses } from "@/components/dashboard/all-expenses";
 import { SavingsGoalCard } from "@/components/dashboard/savings-goal-card";
 import { TransactionsCard } from "@/components/dashboard/transactions-card";
 import { SettingsPanel } from "@/components/dashboard/settings-panel";
-import { type Transaction } from "@/lib/mock-data";
+import { usd, type Transaction } from "@/lib/mock-data";
 import {
   createTransaction,
   addSavingsContribution,
@@ -110,6 +111,17 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
     });
   }
 
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!highlightId) return;
+    const t = setTimeout(() => setHighlightId(null), 2200);
+    return () => clearTimeout(t);
+  }, [highlightId]);
+  function goToTransaction(id: string) {
+    setTab("Transactions");
+    setHighlightId(id);
+  }
+
   const nowKey = monthKeyOf(now);
   const [selectedMonth, setSelectedMonth] = useState(() => nowKey);
 
@@ -148,6 +160,49 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
   const averages = computeAverages(optimisticTx, selectedYear, nowKey);
   const referenceMonth = new Date(selectedMonth + "-01T00:00:00").toLocaleDateString("en-US", { month: "short" });
 
+  const searchItems: SearchItem[] = [
+    ...optimisticTx.map((t) => ({
+      id: `tx-${t.id}`,
+      group: "Transactions",
+      title: t.name,
+      subtitle: `${usd(t.amount, true)} · ${t.date}`,
+      path: `${accountName} › Transactions`,
+      keywords: `${t.name} ${t.category} ${t.detail}`.toLowerCase(),
+      onSelect: () => goToTransaction(t.id),
+    })),
+    ...contributions.map((c) => {
+      const isWithdrawal = c.amount < 0;
+      return {
+        id: `sv-${c.id}`,
+        group: "Savings",
+        title: isWithdrawal ? "Savings withdrawal" : "Savings deposit",
+        subtitle: `${usd(-c.amount, true)} · ${c.dateISO}`,
+        path: `${accountName} › Savings`,
+        keywords: `savings ${isWithdrawal ? "withdrawal" : "deposit"} ${Math.abs(c.amount)}`.toLowerCase(),
+        onSelect: () => goToTransaction(c.id),
+      };
+    }),
+    ...TABS.map((t) => ({
+      id: `page-${t}`,
+      group: "Pages",
+      title: t,
+      path: "Go to page",
+      keywords: t.toLowerCase(),
+      onSelect: () => setTab(t),
+    })),
+    ...accounts.map((a) => ({
+      id: `acct-${a.id}`,
+      group: "Accounts",
+      title: a.name,
+      subtitle: a.id === activeId ? "Current" : undefined,
+      path: a.id === activeId ? "Current account" : "Switch account",
+      keywords: `${a.name} account`.toLowerCase(),
+      onSelect: () => { if (a.id !== activeId) handleSwitchAccount(a.id); },
+    })),
+    { id: "act-add", group: "Actions", title: "Add transaction", path: "Action", keywords: "add transaction new income expense", onSelect: () => setTab("Transactions") },
+    { id: "act-goal", group: "Actions", title: "Set savings goal", path: "Action", keywords: "savings goal target", onSelect: () => setTab("Settings") },
+  ];
+
   return (
     <div className="min-h-screen bg-db-bg text-db-text">
       <Topbar
@@ -159,6 +214,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
         onCreateAccount={handleCreateAccount}
         tab={tab}
         onHome={() => setTab("Overview")}
+        searchItems={searchItems}
       />
 
       <main className="mx-auto max-w-[1560px] px-6 pb-9 pt-[18px]">
@@ -241,6 +297,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
             minMonth={minMonth}
             onStopRecurring={handleStopRecurring}
             onDelete={handleDelete}
+            highlightId={highlightId}
           />
         )}
 

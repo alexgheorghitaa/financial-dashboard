@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { CreateAccountDialog } from "@/components/dashboard/create-account-dialog";
+import { SearchCommand, type SearchItem } from "@/components/dashboard/search-command";
 import { signOut } from "next-auth/react";
-import { Search, Bell, ChevronDown, ChevronsUpDown, ChevronRight, Settings, LogOut, Check, Plus } from "lucide-react";
+import { Bell, ChevronDown, ChevronsUpDown, ChevronRight, Settings, LogOut, Check, Plus } from "lucide-react";
 
 type TopbarUser = { name?: string | null; email?: string | null; image?: string | null };
 type AccountRef = { id: string; name: string };
@@ -27,6 +28,7 @@ export function Topbar({
   onCreateAccount,
   tab,
   onHome,
+  searchItems,
 }: {
   user: TopbarUser;
   accounts: AccountRef[];
@@ -36,6 +38,7 @@ export function Topbar({
   onCreateAccount: (name: string) => void;
   tab: string;
   onHome: () => void;
+  searchItems: SearchItem[];
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -83,11 +86,7 @@ export function Topbar({
         <ChevronRight className="size-4" /><b className="font-semibold text-db-accent">{tab}</b>
       </div>
 
-      <label className="mx-auto flex max-w-[520px] flex-1 items-center gap-2.5 rounded-[11px] border border-db-line bg-db-card2 px-3.5 py-2.5 text-sm text-db-soft focus-within:border-db-line2">
-        <Search className="size-[17px]" />
-        <input placeholder="Search" className="flex-1 bg-transparent text-db-text outline-none placeholder:text-db-soft" />
-        <span className="rounded-md border border-db-line bg-db-card px-1.5 py-0.5 text-[11px] font-semibold">⌘F</span>
-      </label>
+      <SearchCommand items={searchItems} />
 
       <div className="ml-auto flex items-center gap-3">
         <ThemeToggle />

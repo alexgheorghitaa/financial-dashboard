@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -110,7 +110,7 @@ function savingsToRow(c: SavingsContributionUi): Row {
 
 export function TransactionsCard({
   transactions, contributions, onAdd, withControls = false, nowKey = "", minMonth = "",
-  onStopRecurring, onDelete,
+  onStopRecurring, onDelete, highlightId = null,
 }: {
   transactions: Transaction[];
   contributions?: SavingsContributionUi[];
@@ -120,12 +120,20 @@ export function TransactionsCard({
   minMonth?: string;
   onStopRecurring?: (id: string, kind: "transaction" | "savings") => void;
   onDelete?: (id: string, kind: "transaction" | "savings") => void;
+  highlightId?: string | null;
 }) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [sort, setSort] = useState<SortKey>("date-desc");
   const [category, setCategory] = useState<string>("all");
+  const highlightRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const t = setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 70);
+    return () => clearTimeout(t);
+  }, [highlightId]);
 
   const rows = useMemo(() => {
     const all: Row[] = [
@@ -158,8 +166,13 @@ export function TransactionsCard({
       });
     }
 
+    if (highlightId && !result.some((r) => r.id === highlightId)) {
+      const hi = all.find((r) => r.id === highlightId);
+      if (hi) result = [hi, ...result];
+    }
+
     return result;
-  }, [transactions, contributions, filter, query, monthFilter, category, sort, withControls]);
+  }, [transactions, contributions, filter, query, monthFilter, category, sort, withControls, highlightId]);
 
   const showMenu = !!(onStopRecurring || onDelete);
 
@@ -222,8 +235,14 @@ export function TransactionsCard({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((t) => (
-            <TableRow key={`${t.kind}-${t.id}`} className="border-db-line hover:bg-db-card2/60">
+          {rows.map((t) => {
+            const isHi = t.id === highlightId;
+            return (
+            <TableRow
+              key={`${t.kind}-${t.id}`}
+              ref={isHi ? highlightRef : undefined}
+              className={`border-db-line transition-colors ${isHi ? "bg-db-accentweak ring-2 ring-inset ring-db-accent/60" : "hover:bg-db-card2/60"}`}
+            >
               <TableCell className="py-3.5">
                 <div className="flex items-center gap-3">
                   <span className="flex size-[38px] items-center justify-center rounded-[10px] text-sm font-bold" style={{ background: t.tint, color: t.fg }}>{t.initial}</span>
@@ -282,7 +301,8 @@ export function TransactionsCard({
                 )}
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
           {rows.length === 0 && (
             <TableRow className="border-db-line hover:bg-transparent">
               <TableCell colSpan={6} className="py-10 text-center text-sm text-db-muted">No transactions match this filter.</TableCell>
