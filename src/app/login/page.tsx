@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -76,8 +77,10 @@ export default function LoginPage() {
             <span className={`flex size-[18px] items-center justify-center rounded-[5px] border ${remember ? "border-[#16a34a] bg-[#16a34a]" : "border-input"}`}>{remember && <Check className="size-3 text-white" strokeWidth={3} />}</span>
             Remember me
           </button>
-          <a href="#" className="text-[13.5px] font-semibold text-[#22c55e]">Forgot password?</a>
+          <button type="button" onClick={() => setForgotMsg(true)} className="text-[13.5px] font-semibold text-[#22c55e]">Forgot password?</button>
         </div>
+
+        {forgotMsg && <p className="text-[12.5px] text-muted-foreground">Password reset isn&apos;t available yet — it&apos;s coming soon. For now you can create a new account.</p>}
 
         <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl bg-[#16a34a] text-[15px] text-white hover:bg-[#22c55e]">{loading ? "Signing in…" : "Log in"}</Button>
       </form>

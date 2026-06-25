@@ -10,18 +10,18 @@ import {
 const WORDS = ["money", "spending", "savings", "future", "cashflow"];
 
 const FAQ = [
-  { q: "What can I track with FinTrack?", a: "Your balances across accounts, your monthly income and expenses, automatic spending categories, month-by-month statistics, and a running list of transactions — all in one organized dashboard." },
-  { q: "Do transactions categorize themselves?", a: "Yes. FinTrack sorts each transaction into a category automatically, and you can adjust any category by hand. The more you tidy things up, the better your breakdowns reflect how you actually spend." },
+  { q: "What can I track with FinTrack?", a: "Your balances across accounts, your monthly income and expenses, spending by category, month-by-month statistics, and a running list of transactions — all in one organized dashboard." },
+  { q: "How do categories work?", a: "You pick a category for each transaction as you add it — food, rent, income and so on — and FinTrack rolls those into your spending breakdowns and monthly statistics so you can see where your money actually goes." },
   { q: "Can I see how my spending changes over time?", a: "The Statistics view plots your income against your expenses month by month, with running averages, so it's easy to spot trends and see whether you're heading in the right direction." },
-  { q: "Can I export my reports?", a: "Yes. FinTrack summarizes your spending, income and savings into clean monthly reports you can review in-app or export whenever you need a copy." },
+  { q: "Can I set and track savings goals?", a: "Yes. Set a goal amount and FinTrack tracks your progress against your balance, so you always know how close you are and what's left to put aside." },
   { q: "Is my data mine to control?", a: "Always. You can edit categories, fix transaction details, or remove anything you've added at any time — your records stay under your control." },
 ];
 
 const FEATURES = [
-  { icon: Wallet, title: "Track every balance", text: "See all your accounts and cards together with live balances and a single net-worth number that's always up to date." },
+  { icon: Wallet, title: "Track every balance", text: "Keep all your accounts together with their balances and a single net-worth number that updates as you add income and expenses." },
   { icon: TrendingUp, title: "Income & expense analytics", text: "Clear charts break down what comes in and what goes out, month over month, so trends jump out instantly." },
-  { icon: PieChart, title: "Smart categories", text: "Transactions sort into categories automatically — adjust any of them by hand and your breakdowns stay accurate." },
-  { icon: FileText, title: "Reports you'll actually read", text: "Monthly reports summarize your savings, top spends and category splits — ready to review or export anytime." },
+  { icon: PieChart, title: "Clear categories", text: "Tag each transaction with a category as you add it, and your spending breakdowns stay accurate and easy to read." },
+  { icon: FileText, title: "Reports you'll actually read", text: "Monthly reports summarize your savings, top spends and category splits — ready to review anytime." },
 ];
 
 function Logo({ className = "" }: { className?: string }) {
@@ -206,7 +206,7 @@ export default function LandingPage() {
         <div className="text-center">
           <span className="mb-4 inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-[#6A707B]"><span className="h-[7px] w-[7px] rounded-full bg-[#22c55e]" /> Everything in one place</span>
           <h2 className="font-serif text-[clamp(34px,4.4vw,54px)] font-normal leading-tight tracking-tight">A clearer picture of your <em className="text-[#22c55e]">finances</em></h2>
-          <p className="mx-auto mt-4 max-w-[560px] text-[17px] leading-relaxed text-muted-foreground">Connect your accounts and FinTrack does the rest — organizing, categorizing and visualizing your money so decisions get easy.</p>
+          <p className="mx-auto mt-4 max-w-[560px] text-[17px] leading-relaxed text-muted-foreground">Add your accounts and transactions and FinTrack does the rest — organizing and visualizing your money so decisions get easy.</p>
         </div>
         <div className="mt-12 grid grid-cols-1 gap-[18px] sm:grid-cols-2">
           {FEATURES.map((f) => (
@@ -226,8 +226,8 @@ export default function LandingPage() {
         </div>
         <div className="mt-12 grid grid-cols-1 gap-[22px] md:grid-cols-3">
           {[
-            { n: "01", t: "Add your accounts", d: "Bring your balances and transactions into FinTrack to get a single, organized view of your money in minutes." },
-            { n: "02", t: "Watch it organize", d: "FinTrack imports and categorizes your history, building your balance, income and expense views automatically." },
+            { n: "01", t: "Add your accounts", d: "Add your balances and transactions to FinTrack to get a single, organized view of your money in minutes." },
+            { n: "02", t: "Watch it organize", d: "As you add transactions, FinTrack builds your balance, income and expense views and sorts them into the categories you choose." },
             { n: "03", t: "Make better calls", d: "Spot trends, track a savings goal and see exactly where your money goes with clear monthly insights." },
           ].map((s) => (
             <div key={s.n} className="rounded-2xl border border-border bg-card p-7">
@@ -272,7 +272,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-border px-6 py-14">
-        <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-9 md:grid-cols-4">
+        <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-9 md:grid-cols-3">
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 text-lg font-extrabold"><Logo /> FinTrack</Link>
             <p className="mt-3.5 max-w-[260px] text-[13.5px] leading-relaxed text-muted-foreground">The calm, clear way to track your money, understand your spending and grow your savings.</p>
@@ -285,19 +285,13 @@ export default function LandingPage() {
             <Link href="/dashboard" className="mb-2.5 block text-sm text-muted-foreground hover:text-foreground">Dashboard</Link>
           </div>
           <div>
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-[0.14em]">Company</h4>
-            {["About", "Blog", "Careers", "Contact"].map((x) => <a key={x} href="#" className="mb-2.5 block text-sm text-muted-foreground hover:text-foreground">{x}</a>)}
-          </div>
-          <div>
             <h4 className="mb-4 text-xs font-bold uppercase tracking-[0.14em]">Account</h4>
             <Link href="/login" className="mb-2.5 block text-sm text-muted-foreground hover:text-foreground">Log in</Link>
             <Link href="/register" className="mb-2.5 block text-sm text-muted-foreground hover:text-foreground">Create account</Link>
-            <a href="#" className="mb-2.5 block text-sm text-muted-foreground hover:text-foreground">Help center</a>
           </div>
         </div>
         <div className="mx-auto mt-11 flex max-w-[1180px] flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-[13px] text-[#6A707B]">
           <div>© 2026 FinTrack. All rights reserved.</div>
-          <div className="flex gap-6"><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Cookies</a></div>
         </div>
       </footer>
     </div>

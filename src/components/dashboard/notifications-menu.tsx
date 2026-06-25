@@ -66,9 +66,7 @@ export function NotificationsMenu({
         >
           <Bell className="size-[19px]" />
           {unreadCount > 0 && (
-            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] px-1 text-[9px] font-bold leading-none text-white ring-2 ring-db-card">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
+            <span className="absolute right-2.5 top-2 size-2 rounded-full border-2 border-db-card bg-[#EF4444]" />
           )}
         </button>
       </DropdownMenuTrigger>
