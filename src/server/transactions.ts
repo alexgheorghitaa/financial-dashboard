@@ -81,6 +81,8 @@ export async function getTransactionsForUser(userId: string) {
     transactions: account.transactions.map(toUiTransaction),
     contributions: account.savingsContributions.map(toUiContribution),
     savingsGoal: account.savingsGoal,
+    tip: account.tipText,
+    tipUpdatedAt: account.tipUpdatedAt ? account.tipUpdatedAt.toISOString() : null,
     accounts: user.accounts,
     activeId,
     userName: user.name,

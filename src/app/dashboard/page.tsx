@@ -14,6 +14,12 @@ export default async function DashboardPage() {
   const savingsGoal = data?.savingsGoal ?? 0;
   const accounts = data?.accounts ?? [];
   const activeId = data?.activeId ?? "";
+  const tip = data?.tip ?? null;
+  const tipUpdatedAt = data?.tipUpdatedAt ?? null;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const tipElapsed = tipUpdatedAt ? new Date(now).getTime() - new Date(tipUpdatedAt).getTime() : Infinity;
+  const canRefreshTip = tipElapsed >= DAY_MS;
+  const tipHoursLeft = canRefreshTip ? 0 : Math.ceil((DAY_MS - tipElapsed) / 3_600_000);
   const user = {
     name: data?.userName ?? session.user.name,
     email: data?.userEmail ?? session.user.email,
@@ -29,6 +35,9 @@ export default async function DashboardPage() {
       savingsGoal={savingsGoal}
       accounts={accounts}
       activeId={activeId}
+      tip={tip}
+      canRefreshTip={canRefreshTip}
+      tipHoursLeft={tipHoursLeft}
     />
   );
 }

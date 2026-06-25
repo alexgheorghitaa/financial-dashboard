@@ -1,5 +1,6 @@
 "use client";
 
+import { type ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { Wallet, TrendingDown, PiggyBank } from "lucide-react";
 import { usd, pct } from "@/lib/mock-data";
@@ -28,7 +29,7 @@ function ChangeBadge({ value }: { value: number | null }) {
   );
 }
 
-export function StatCards({ stats, onAddTransaction }: { stats: Stats; onAddTransaction?: () => void }) {
+export function StatCards({ stats, onAddTransaction, tipCard }: { stats: Stats; onAddTransaction?: () => void; tipCard?: ReactNode }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <Card className="rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
@@ -54,12 +55,14 @@ export function StatCards({ stats, onAddTransaction }: { stats: Stats; onAddTran
         <p className="mt-3 text-[13px]"><span className="text-db-soft">average per day</span></p>
       </Card>
 
-      <Card className="flex min-h-[186px] flex-col rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
-        <span className="flex size-[42px] items-center justify-center rounded-full bg-db-card2 text-[#16A34A]"><PiggyBank className="size-5" /></span>
-        <p className="mt-3.5 text-sm font-medium text-db-muted">Monthly Savings</p>
-        <Money value={stats.savings} className="mt-3 text-[26px] font-bold tracking-tight text-db-text" />
-        <p className="mt-3 text-[13px]"><ChangeBadge value={stats.savingsChange} /> <span className="text-db-soft">income − expenses</span></p>
-      </Card>
+      {tipCard ?? (
+        <Card className="flex min-h-[186px] flex-col rounded-2xl border-db-line bg-db-card p-[18px]" style={{ boxShadow: "var(--db-shadow)" }}>
+          <span className="flex size-[42px] items-center justify-center rounded-full bg-db-card2 text-[#16A34A]"><PiggyBank className="size-5" /></span>
+          <p className="mt-3.5 text-sm font-medium text-db-muted">Monthly Savings</p>
+          <Money value={stats.savings} className="mt-3 text-[26px] font-bold tracking-tight text-db-text" />
+          <p className="mt-3 text-[13px]"><ChangeBadge value={stats.savingsChange} /> <span className="text-db-soft">income − expenses</span></p>
+        </Card>
+      )}
     </div>
   );
 }

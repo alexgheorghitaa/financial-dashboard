@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { getTransactionsForUser, getActiveAccountId } from "@/server/transactions";
+import { generateDailyTip } from "@/server/groq";
+import { buildTipSnapshot } from "@/lib/tip-context";
 import { monthKeyOf, computeBalanceUntil, computeSaved } from "@/lib/derive";
 
 const schema = z.object({
@@ -287,4 +289,72 @@ export async function deleteAccount(accountId: string): Promise<{ success?: bool
 
   revalidatePath("/dashboard");
   return { success: true };
+}
+
+export async function generateTip(): Promise<{ tip?: string; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const accountId = await getActiveAccountId(session.user.id);
+  if (!accountId) return { error: "No account found." };
+
+  const data = await getTransactionsForUser(session.user.id);
+  if (!data) return { error: "No data to analyze yet." };
+
+  const acct = await prisma.account.findUnique({
+    where: { id: accountId },
+    select: { tipText: true, tipMemory: true, tipUpdatedAt: true },
+  });
+
+  // One generation per 24h.
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  if (acct?.tipUpdatedAt) {
+    const elapsed = Date.now() - acct.tipUpdatedAt.getTime();
+    if (elapsed < DAY_MS) {
+      const hoursLeft = Math.ceil((DAY_MS - elapsed) / 3_600_000);
+      return { error: `Your tip is set — you can refresh again in about ${hoursLeft}h.` };
+    }
+  }
+
+  const nowISO = new Date().toISOString();
+  const nowKey = monthKeyOf(nowISO);
+  const today = nowISO.slice(0, 10);
+
+  const daysSince = acct?.tipUpdatedAt ? Math.floor((Date.now() - acct.tipUpdatedAt.getTime()) / DAY_MS) : null;
+  const gapNote =
+    daysSince === null
+      ? "This is the first tip for this account."
+      : daysSince <= 1
+        ? "About a day has passed since the last tip."
+        : `${daysSince} days have passed since the last tip — welcome the user back.`;
+
+  const snapshot = gapNote + "\n" + buildTipSnapshot({
+    accountName: data.account.name,
+    accountCreatedAt: data.account.createdAt,
+    transactions: data.transactions,
+    contributions: data.contributions,
+    savingsGoal: data.savingsGoal,
+    nowKey,
+    today,
+  });
+
+  let result: { tip: string; memory: string };
+  try {
+    result = await generateDailyTip({
+      snapshot,
+      memory: acct?.tipMemory ?? "",
+      previousTip: acct?.tipText ?? "",
+    });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not generate a tip." };
+  }
+
+  // Each generation is at least 24h apart, so the rolling memory always advances.
+  await prisma.account.update({
+    where: { id: accountId },
+    data: { tipText: result.tip, tipMemory: result.memory, tipUpdatedAt: new Date() },
+  });
+
+  revalidatePath("/dashboard");
+  return { tip: result.tip };
 }

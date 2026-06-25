@@ -10,6 +10,7 @@ import { AllExpenses } from "@/components/dashboard/all-expenses";
 import { SavingsGoalCard } from "@/components/dashboard/savings-goal-card";
 import { TransactionsCard } from "@/components/dashboard/transactions-card";
 import { SettingsPanel } from "@/components/dashboard/settings-panel";
+import { TipCard } from "@/components/dashboard/tip-card";
 import { usd, type Transaction } from "@/lib/mock-data";
 import {
   createTransaction,
@@ -36,7 +37,7 @@ type DashUser = { name?: string | null; email?: string | null; image?: string | 
 
 type AccountRef = { id: string; name: string };
 
-export function DashboardClient({ user, transactions, now, accountCreatedAt, contributions = [], savingsGoal = 0, accounts = [], activeId = "" }: {
+export function DashboardClient({ user, transactions, now, accountCreatedAt, contributions = [], savingsGoal = 0, accounts = [], activeId = "", tip = null, canRefreshTip = true, tipHoursLeft = 0 }: {
   user: DashUser;
   transactions: Transaction[];
   now: string;
@@ -45,6 +46,9 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
   savingsGoal?: number;
   accounts?: AccountRef[];
   activeId?: string;
+  tip?: string | null;
+  canRefreshTip?: boolean;
+  tipHoursLeft?: number;
 }) {
   const [tab, setTab] = useState<Tab>("Overview");
   const [optimisticTx, addOptimistic] = useOptimistic(
@@ -249,7 +253,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
           <div className="space-y-4">
             <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="flex flex-col gap-4">
-                <StatCards stats={stats} onAddTransaction={() => setTab("Transactions")} />
+                <StatCards stats={stats} onAddTransaction={() => setTab("Transactions")} tipCard={<TipCard tip={tip} canRefresh={canRefreshTip} hoursLeft={tipHoursLeft} />} />
                 <StatisticsCard
                   monthlyData={monthlySeries}
                   weeklyData={weeklySeries}
@@ -271,7 +275,7 @@ export function DashboardClient({ user, transactions, now, accountCreatedAt, con
 
         {tab === "Analytics" && (
           <div className="space-y-4">
-            <StatCards stats={stats} onAddTransaction={() => setTab("Transactions")} />
+            <StatCards stats={stats} onAddTransaction={() => setTab("Transactions")} tipCard={<TipCard tip={tip} canRefresh={canRefreshTip} hoursLeft={tipHoursLeft} />} />
             <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
               <StatisticsCard
                 monthlyData={monthlySeries}

@@ -35,6 +35,9 @@ model Account{
   transactions Transaction[]
   savingsContributions SavingsContribution[]
   savingsGoal  Float         @default(0)
+  tipText      String?
+  tipMemory    String?
+  tipUpdatedAt DateTime?
   createdAt    DateTime      @default(now())
 }
 
