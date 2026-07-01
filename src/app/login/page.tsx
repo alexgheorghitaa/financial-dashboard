@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AuthLayout } from "@/components/auth/auth-layout";
@@ -12,16 +12,22 @@ import { signIn } from "next-auth/react";
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
+ 
+
 export default function LoginPage() {
   const router = useRouter();
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const passwordOK="";
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [forgotMsg, setForgotMsg] = useState(false);
-
+  useEffect(() => {
+    
+    console.log("Heloo");
+  }, []);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const next: typeof errors = {};
